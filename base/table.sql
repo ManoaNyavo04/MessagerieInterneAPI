@@ -9,7 +9,7 @@ CREATE TABLE pole(
 
 CREATE TABLE role (
     id_role serial primary key,
-    role VARCHAR(100)
+    role VARCHAR(100) -- 0: admin et 1: simple user
 );
 
 CREATE TABLE statuts_message(
@@ -25,12 +25,12 @@ CREATE TABLE utilisateur(
     id_role INT,
     foreign key (id_role) references role(id_role)
 );
+alter TABLE utilisateur ADD COLUMN mdp TEXT;
 
 CREATE TABLE espace_travail(
     id_espace_travail serial primary key,
     nom VARCHAR(100),
     id_pole INT,
-
     id_admin INT,
     foreign key (id_pole) references pole(id_pole),
     foreign key (id_admin) references utilisateur(id_utilisateur)
