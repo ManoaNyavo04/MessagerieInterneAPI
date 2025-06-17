@@ -1,4 +1,9 @@
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
+SET client_encoding = 'UTF8';
+
+
+INSERT INTO pole (pole) VALUES
+('TOPO'), ('CARTO'), ('R2I'),('PATR');
 
 INSERT INTO role (role) VALUES
 ('admin'),
@@ -15,5 +20,50 @@ INSERT INTO utilisateur (nom, prenom, matricule, id_role, mdp) VALUES
 ('Ravonimanana', 'Soa', 'MAT008', 2, crypt('Soa2025', gen_salt('bf'))),
 ('Rakotobe', 'Njaka', 'MAT009', 1, crypt('Njaka2025', gen_salt('bf'))),
 ('Razanatsimba', 'Fanja', 'MAT010', 2, crypt('Fanja2025', gen_salt('bf')));
+
+INSERT INTO statuts_message (statuts) VALUES
+('envoyé'),
+('reçu'),
+('lu'),
+('archivé'),
+('supprimé');
+
+INSERT INTO espace_travail (nom, id_pole, id_admin) VALUES
+('Projet SIG', 1, 1),
+('Suivi cartographique', 2, 5),
+('Analyse données', 3, 9);
+
+INSERT INTO utilisateur_espace_travail (id_utilisateur, id_espace_travail) VALUES
+(2, 1),
+(3, 1),
+(4, 2),
+(6, 2),
+(7, 3),
+(8, 3),
+(10, 1);
+
+INSERT INTO groupe_discussion (nom, id_espace_travail, description, date_creation, id_createur) VALUES
+('Discussion SIG', 1, 'Groupe de discussion sur les donnees SIG', NOW(), 1),
+('Cartographie avancee', 2, 'Echange autour des cartes vectorielles', NOW(), 5),
+('R2I Strategie', 3, 'Reflexion strategique du pole R2I', NOW(), 9);
+
+
+INSERT INTO utilisateur_groupe_discussion (id_groupe_discussion, id_utilisateur, est_admin) VALUES
+(1, 2, FALSE),
+(1, 3, FALSE),
+(1, 1, TRUE),
+
+(2, 4, FALSE),
+(2, 5, TRUE),
+(2, 6, FALSE),
+
+(3, 7, FALSE),
+(3, 9, TRUE),
+(3, 8, FALSE);
+
+
+
+
+
 
 
