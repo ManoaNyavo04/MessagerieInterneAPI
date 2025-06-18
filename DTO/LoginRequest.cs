@@ -10,10 +10,10 @@ namespace MessagerieInterneAPI
     {
         public string Matricule { get; set; }
         public string Mdp { get; set; }
-
+        
         public LoginRequest()
         {
-
+            
         }
 
         public LoginRequest(String mlle, String motPasse)
@@ -30,16 +30,25 @@ namespace MessagerieInterneAPI
                 new Claim(ClaimTypes.Email, utilisateur.Matricule),
                 new Claim(ClaimTypes.Role, utilisateur.Id_role.ToString())
             };
-
-            var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_config["Jwt:Key"]));
-            var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
-
-            var token = new JwtSecurityToken(
-                claims: claims,
-                expires: DateTime.Now.AddHours(1),
-                signingCredentials: creds);
-
-            return new JwtSecurityTokenHandler().WriteToken(token);
+            var configJwtKey = _config["Jwt:Key"];
+            if (string.IsNullOrEmpty(configJwtKey))
+            {
+                throw new Exception("fichier de configuration Token invalide");
+            }
+            var key = Encoding.ASCII.GetBytes(configJwtKey);
+            var tokenDescriptor = new SecurityTokenDescriptor
+            {
+                Subject = new ClaimsIdentity(claims),
+                Issuer = _config["Jwt:Issuer"],
+                Audience = _config["Jwt:Issuer"],
+                Expires = DateTime.Now.AddMinutes(480),
+                SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256)
+            };
+            var tokenHandler = new JwtSecurityTokenHandler();
+            var token = tokenHandler.CreateToken(tokenDescriptor);
+            string userToken = tokenHandler.WriteToken(token);
+            return userToken;
+            
         }
     }
 }

@@ -7,14 +7,20 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace MessagerieInterneAPI
 {
+    [Authorize]
     [ApiController]
     [Route("api/[controller]")]
     public class GroupeDiscussionController : ControllerBase
     {
         private Connexion connexion = new Connexion();
-        private GroupeDiscussionService _service;
 
-        [Authorize]
+        private readonly GroupeDiscussionService _service;
+
+        public GroupeDiscussionController(GroupeDiscussionService service)
+        {
+            _service = service;
+        }
+
         [HttpGet("mesGrpDiscu")]
         public async Task<IActionResult> GetGrpDiscuByUser()
         {
@@ -22,7 +28,7 @@ namespace MessagerieInterneAPI
             if (idUtilisateurClaim == null) return Unauthorized();
 
             int idUtilisateur = int.Parse(idUtilisateurClaim.Value);
-            Console.WriteLine("id ve hitany: "+idUtilisateur);
+            Console.WriteLine("id ve hitany: " + idUtilisateur);
             var liaisonBase = connexion.ConnectPostgres();
             var mesGrp = _service.GetUtilisateurGrpDiscu(liaisonBase, idUtilisateur);
 

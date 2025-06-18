@@ -23,7 +23,6 @@ namespace MessagerieInterneAPI
                 NpgsqlCommand cmd = new NpgsqlCommand(sql, liaisonbase);
                 cmd.Parameters.AddWithValue("@iduser", idUtilisateur);
 
-                cmd.ExecuteNonQuery();
 
                 NpgsqlDataReader reader = cmd.ExecuteReader();
                 while(reader.Read()){
