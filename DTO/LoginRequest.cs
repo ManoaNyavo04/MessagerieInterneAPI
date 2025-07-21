@@ -40,6 +40,7 @@ namespace MessagerieInterneAPI
             {
                 Subject = new ClaimsIdentity(claims),
                 Issuer = _config["Jwt:Issuer"],
+                
                 Audience = _config["Jwt:Issuer"],
                 Expires = DateTime.Now.AddMinutes(480),
                 SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256)
@@ -47,6 +48,7 @@ namespace MessagerieInterneAPI
             var tokenHandler = new JwtSecurityTokenHandler();
             var token = tokenHandler.CreateToken(tokenDescriptor);
             string userToken = tokenHandler.WriteToken(token);
+            
             return userToken;
             
         }

@@ -57,8 +57,10 @@ builder.Services.AddSwaggerGen(options =>
             },
             new string[] {}
         }
+
     });
 });
+
 
 
 // Ajoute le service CORS
@@ -69,12 +71,14 @@ builder.Services.AddCors(options =>
         {
             policy.WithOrigins("http://localhost:3000")
                   .AllowAnyHeader()
-                  .AllowAnyMethod();
+                  .AllowAnyMethod()
+                  .AllowCredentials();
         });
 });
 
 builder.Services.AddScoped<UtilisateurService>();
 builder.Services.AddScoped<GroupeDiscussionService>();
+builder.Services.AddSignalR();
 
 
 var app = builder.Build();
@@ -83,11 +87,16 @@ app.UseCors("AllowLocalhost3000");
 app.UseAuthorization();
 //app.UseAuthentication();
 app.MapControllers();
+app.UseRouting();
+app.UseCors("AllowReactApp");
+
+app.MapHub<ChatHub>("/chathub");
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
+
     app.UseSwaggerUI();
 }
 
@@ -112,6 +121,7 @@ app.MapGet("/weatherforecast", () =>
 })
 .WithName("GetWeatherForecast")
 .WithOpenApi();
+
 
 app.Run();
 

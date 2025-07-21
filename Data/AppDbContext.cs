@@ -12,6 +12,7 @@ namespace MessagerieInterneAPI.Data
 
         public DbSet<UtilisateurModel> Utilisateur { get; set; }
         public DbSet<UtilisateurGroupeDiscussionModel> UtilisateurGrpDiscu { get; set; }
+        public DbSet<MessageModel> Message { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {

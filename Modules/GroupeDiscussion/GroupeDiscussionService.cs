@@ -30,6 +30,7 @@ namespace MessagerieInterneAPI
                     user.Id_utilisateur = (reader.GetInt32(0));
                     user.Id_groupe_discussion = (reader.GetInt32(1));
                     user.Nom = (reader.GetString(2));
+                    
                     user.Prenom = (reader.GetString(3));
                     user.Matricule = (reader.GetString(4));
                     user.Groupe = (reader.GetString(5));

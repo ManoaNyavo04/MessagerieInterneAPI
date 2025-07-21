@@ -17,8 +17,9 @@ namespace MessagerieInterneAPI.Modules.Utilisateur
         {
             _config = config;
             _context = context;
-             _service = service ?? throw new ArgumentNullException(nameof(service));
+            _service = service ?? throw new ArgumentNullException(nameof(service));
         }
+
 
         [HttpPost("testConnex")]
         public IActionResult TestConnexion()
@@ -45,5 +46,15 @@ namespace MessagerieInterneAPI.Modules.Utilisateur
                 profilUtilisateur
             });
         }
+
+        [HttpGet("allUsers")]        
+        public async Task<IActionResult> GetAllUtilisateurs()
+        {
+            Connexion connect = new Connexion();
+            var connex = connect.ConnectPostgres();
+            var result = _service.GetAllUtilisateurs(connex);
+            return Ok(result);
+        }
     }
 }
+
