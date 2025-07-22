@@ -1,5 +1,6 @@
 ﻿using System.Data;
 using MessagerieInterneAPI.Data;
+using MessagerieInterneAPI.Entite;
 using Npgsql;
 
 namespace MessagerieInterneAPI.Modules.Discussion
@@ -148,6 +149,94 @@ namespace MessagerieInterneAPI.Modules.Discussion
                 }
             }
 
+        }
+
+        public List<DiscussionModel> GetGrpDiscussionByUser(int userId, NpgsqlConnection liasonBase)
+        {
+            List<DiscussionModel> discussions = new List<DiscussionModel>();
+            String sql = "SELECT id_groupe_discussion, groupe, 'groupe' AS type FROM v_utilisateur_groupe_discussion WHERE id_utilisateur = @userId";
+
+            if (liasonBase == null || liasonBase.State == ConnectionState.Closed)
+            {
+                Connexion connexion = new Connexion();
+                liasonBase = connexion.ConnectPostgres();
+                liasonBase.Open();
+            }
+
+            try
+            {
+                NpgsqlCommand cmd = new NpgsqlCommand(sql, liasonBase);
+                cmd.Parameters.AddWithValue("@userId", userId);
+                NpgsqlDataReader reader = cmd.ExecuteReader();
+
+                while (reader.Read())
+                {
+                    DiscussionModel discussion = new DiscussionModel
+                    {
+                        Id = reader.GetInt32(0),
+                        Nom = reader.GetString(1),
+                        Type = reader.GetString(2)
+                    };
+                    discussions.Add(discussion);
+                }
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e.Message);
+            }
+            finally
+            {
+                if (liasonBase != null)
+                {
+                    liasonBase.Close();
+                }
+            }
+
+            return discussions;
+        }
+
+        public List<DiscussionModel> GetDiscussionIndividuelleByUser(int userId, NpgsqlConnection liasonBase)
+        {
+            List<DiscussionModel> discussions = new List<DiscussionModel>();
+            String sql = "SELECT id_utilisateur, nom, 'prive' AS type FROM v_discussions_individuelles WHERE id_utilisateur = @userId";
+
+            if (liasonBase == null || liasonBase.State == ConnectionState.Closed)
+            {
+                Connexion connexion = new Connexion();
+                liasonBase = connexion.ConnectPostgres();
+                liasonBase.Open();
+            }
+
+            try
+            {
+                NpgsqlCommand cmd = new NpgsqlCommand(sql, liasonBase);
+                cmd.Parameters.AddWithValue("@userId", userId);
+                NpgsqlDataReader reader = cmd.ExecuteReader();
+
+                while (reader.Read())
+                {
+                    DiscussionModel discussion = new DiscussionModel
+                    {
+                        Id = reader.GetInt32(0),
+                        Nom = reader.GetString(1),
+                        Type = reader.GetString(2)
+                    };
+                    discussions.Add(discussion);
+                }
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e.Message);
+            }
+            finally
+            {
+                if (liasonBase != null)
+                {
+                    liasonBase.Close();
+                }
+            }
+
+            return discussions;
         }
     }
 }

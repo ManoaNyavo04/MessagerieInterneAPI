@@ -61,6 +61,13 @@ INSERT INTO utilisateur_groupe_discussion (id_groupe_discussion, id_utilisateur,
 (3, 9, TRUE),
 (3, 8, FALSE);
 
+INSERT INTO message (id_expediteur, id_destinataire, contenu, date_envoie, id_groupe_discussion, id_status_msg) VALUES
+(1, 2, 'Bonjour Lalao, comment vas-tu ?', NOW(), 1, 1),
+(2, 1, 'Salut Jean, je vais bien merci ! Et toi ?', NOW(), 1, 2),
+(3, 4, 'Tojo, as-tu vu la dernière carte ?', NOW(), 2, 1),
+(5, 6, 'Miora, peux-tu vérifier les données de ce projet ?', NOW(), NULL, 1),
+(7, 8, 'Fanja, on se retrouve pour discuter du projet demain ?', NOW(), NULL, 1);
+
 
 
 

@@ -1,8 +1,12 @@
-﻿using MessagerieInterneAPI.Data;
+﻿using System.Security.Claims;
+using MessagerieInterneAPI.Data;
+using MessagerieInterneAPI.Entite;
 using Microsoft.AspNetCore.Mvc;
 
 namespace MessagerieInterneAPI.Modules.Discussion
 {
+    [ApiController]
+    [Route("api/[controller]")]
     public class MessageController : ControllerBase
     {
         private readonly AppDbContext _context;
@@ -43,6 +47,47 @@ namespace MessagerieInterneAPI.Modules.Discussion
             _service.SendMessage(connexion.ConnectPostgres(), message);
             return Ok("Message sent successfully.");
         }
+        /*
+        var discussions = await GetGroupes(idUtilisateur, conn);
+discussions.AddRange(await GetPrives(idUtilisateur, conn));
+return Ok(discussions);
+
+        */
+        [HttpGet("getMesDiscussions")]
+        public async Task<IActionResult> GetMesDiscussions()
+        {
+            var idUtilisateurClaim = User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier);
+            if (idUtilisateurClaim == null) return Unauthorized();
+
+            int idUtilisateur = int.Parse(idUtilisateurClaim.Value);
+            Console.WriteLine("id ve hitany (disussion): " + idUtilisateur);
+            var conn = connexion.ConnectPostgres();
+            if (conn == null)
+            {
+                return StatusCode(500, "Database connection failed.");
+
+            }
+
+
+            var discussions = new List<DiscussionModel>();
+            discussions.AddRange(_service.GetGrpDiscussionByUser(idUtilisateur, conn));
+            discussions.AddRange(_service.GetDiscussionIndividuelleByUser(idUtilisateur, conn));
+
+            return Ok(discussions);
+        }
+
+        [HttpGet("messages")]
+        public async Task<IActionResult> GetMessages(int targetId, string type)
+        {
+            var idUtilisateur = int.Parse(User.Claims.First(c => c.Type == ClaimTypes.NameIdentifier).Value);
+
+            List<MessageModel> messages = type == "groupe"
+                ? _service.GetMessagesByGroupId(connexion.ConnectPostgres(), targetId)
+                : _service.GetIndividualMessage(connexion.ConnectPostgres(), idUtilisateur, targetId);
+
+            return Ok(messages);
+        }
+
 
     }
 }

@@ -1,17 +1,26 @@
-﻿using System.ComponentModel.DataAnnotations.Schema;
+﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace MessagerieInterneAPI
 {
     [Table("message")]
     public class MessageModel
     {
+        [Key]
+        [Column("id_message")]
         public int Id_message { get; set; }
         
+        [Column("id_expediteur")]
         public int Id_expediteur { get; set; }
+        [Column("id_destinataire")]
         public int Id_destinataire { get; set; }
+        [Column("id_groupe_discussion")]
         public int Id_groupe_discussion { get; set; }
+        [Column("contenu")]
         public string Contenu { get; set; }
+        [Column("date_envoi")]
         public DateTime Date_envoi { get; set; }
+        [Column("id_statut_msg")]
         public int Id_statut_msg { get; set; }
 
         public MessageModel() { }
