@@ -14,37 +14,81 @@ namespace MessagerieInterneAPI
 
         public async Task JoinGroup(string groupName)
         {
+            Console.WriteLine($"👥 JoinGroup() appelé pour : {groupName}, ConnId: {Context.ConnectionId}");
             await Groups.AddToGroupAsync(Context.ConnectionId, groupName);
         }
+
 
         public async Task SendMessageToGroup(string groupName, string user, string message)
         {
             await Clients.Group(groupName).SendAsync("ReceiveMessage", user, message);
         }
 
-        public async Task SendMessageToDiscussion(int idExp, int idDest, int? idGroupe, string message)
+        public async Task SendMessageToDiscussion(int idExp, int? idDest, int? idGroupe, string message, string groupName)
         {
-            var msg = new MessageModel
+            try
             {
-                Id_expediteur = idExp,
-                Id_destinataire = idDest,
-                Id_groupe_discussion = (int)idGroupe,
-                Contenu = message,
-                Date_envoi = DateTime.UtcNow,
-                Id_statut_msg = 1
-            };
+                Console.WriteLine($"📥 Reçu dans Hub : idExp={idExp}, idDest={idDest}, idGroupe={idGroupe}, message={message}");
 
-            var liason = new Connexion().ConnectPostgres();
-            new MessageService().SendMessage(liason, msg);
+                if (idGroupe == null && idDest == null)
+                {
+                    throw new ArgumentException("Le message doit avoir un destinataire ou un groupe.");
+                }
 
-            if (idGroupe != null)
-                await Clients.Group("groupe_" + idGroupe).SendAsync("ReceiveMessage", idExp, message);
-            else
-            {
-                await Clients.User(idExp.ToString()).SendAsync("ReceiveMessage", idExp, message);
-                await Clients.User(idDest.ToString()).SendAsync("ReceiveMessage", idExp, message);
+
+                var msg = new MessageModel
+                {
+                    Id_expediteur = idExp,
+                    Id_destinataire = idDest,
+                    Id_groupe_discussion = idGroupe,
+                    Contenu = message,
+                    Date_envoie = DateTime.UtcNow,
+                    Id_status_msg = 1
+                };
+
+                var liason = new Connexion().ConnectPostgres();
+                new MessageService().SendMessage(liason, msg);
+
+                // ✅ Logique de diffusion correct selon le type
+                if (idGroupe != null)
+                {
+                    Console.WriteLine($"📤 Envoi au groupe {groupName} (ID: {idGroupe})");
+                    await Clients.Group(groupName).SendAsync("ReceiveMessage", new
+                        {
+                            id_expediteur = idExp,
+                            id_groupe_discussion = idGroupe,
+                            contenu = message,
+                            date_envoie = DateTime.UtcNow.ToString("o")
+                        });
+
+                }
+                else
+                {
+                    Console.WriteLine($"📤 Envoi aux utilisateurs {idExp} et {idDest}");
+                    var payload = new
+                    {
+                        id_expediteur = idExp,
+                        id_destinataire = idDest,
+                        contenu = message,
+                        date_envoie = DateTime.UtcNow.ToString("o")
+                    };
+
+                    await Clients.User(idExp.ToString()).SendAsync("ReceiveMessage", payload);
+                    await Clients.User(idDest.ToString()).SendAsync("ReceiveMessage", payload);
+
+                }
             }
-        }
+            catch (Exception ex)
+            {
+                Console.WriteLine("❌ ERREUR DANS HUB : " + ex.Message);
+                Console.WriteLine(ex.StackTrace);
+                throw;
+            }
+    }
+
+
+
+
 
     }
 }

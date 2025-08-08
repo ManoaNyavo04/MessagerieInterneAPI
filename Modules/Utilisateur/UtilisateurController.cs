@@ -1,4 +1,5 @@
 ﻿using MessagerieInterneAPI.Data;
+using MessagerieInterneAPI.Entite;
 using Microsoft.AspNetCore.Mvc;
 using Npgsql;
 
@@ -35,7 +36,7 @@ namespace MessagerieInterneAPI.Modules.Utilisateur
             var siUtilisateur = await _service.VerifUtilisateur(model.Matricule, model.Mdp);
             if (siUtilisateur == null)
             {
-                return Unauthorized("Matricule ou mot de passe invalide.");
+                return Unauthorized("Matricule ou mot de passe invalide eeeeeeeeee.");
             }
 
             var token = login.GenererToken(siUtilisateur, _config);
@@ -45,15 +46,28 @@ namespace MessagerieInterneAPI.Modules.Utilisateur
                 token,
                 profilUtilisateur
             });
+
         }
 
-        [HttpGet("allUsers")]        
+        [HttpGet("allUsers")]
         public async Task<IActionResult> GetAllUtilisateurs()
         {
             Connexion connect = new Connexion();
             var connex = connect.ConnectPostgres();
             var result = _service.GetAllUtilisateurs(connex);
             return Ok(result);
+        }
+        
+        [HttpPost("addUtilisateur")]
+        public async Task<IActionResult> AddUtilisateur([FromBody] UtilisateurModel utilisateur)
+        {
+            var connexion = new Connexion().ConnectPostgres();
+            var result = await _service.VerifMatricule(connexion, utilisateur);
+            if (!result)
+            {
+                return BadRequest("Matricule déjà utilisé.");
+            }
+            return Ok(new { result, message = "Utilisateur ajouté avec succès." });
         }
     }
 }

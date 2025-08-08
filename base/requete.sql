@@ -55,3 +55,57 @@ SELECT
     'groupe' AS type
 FROM groupe_discussion gd
 JOIN groupe_membres gm ON gm.id_groupe_discussion = gd.id_groupe_discussion;
+
+
+
+SELECT *
+FROM message
+WHERE id_groupe_discussion IS NULL
+AND (
+    (id_expediteur = 5 AND id_destinataire = 6) OR
+    (id_expediteur = 6 AND id_destinataire = 5)
+)
+ORDER BY date_envoie;
+
+
+SELECT 
+    CASE 
+        WHEN id_expediteur = 7 THEN id_destinataire
+        ELSE id_expediteur
+    END AS id_autre_utilisateur,
+    
+    CASE 
+        WHEN id_expediteur = 7 THEN nom_destinataire
+        ELSE nom_expediteur
+    END AS nom_autre_utilisateur,
+    
+    'prive' AS type
+FROM v_discussions_individuelles
+WHERE id_expediteur = 7 OR id_destinataire = 7
+GROUP BY id_autre_utilisateur, nom_autre_utilisateur;
+
+
+
+SELECT 
+    CASE 
+        WHEN id_expediteur = @userId THEN id_destinataire
+        ELSE id_expediteur
+    END AS id_autre_utilisateur,
+    
+    CASE 
+        WHEN id_expediteur = @userId THEN nom_destinataire
+        ELSE nom_expediteur
+    END AS nom_autre_utilisateur,
+    
+    'prive' AS type
+FROM v_discussions_individuelles
+WHERE id_expediteur = @userId OR id_destinataire = @userId
+GROUP BY id_autre_utilisateur, nom_autre_utilisateur;
+
+
+
+select u.id_utilisateur, u.nom, u.prenom, u.matricule, u.mdp, u.id_role, r.role 
+from utilisateur u  
+join role r on r.id_role = u.id_role order by u.id_utilisateur;
+
+

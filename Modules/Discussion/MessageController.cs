@@ -79,11 +79,17 @@ return Ok(discussions);
         [HttpGet("messages")]
         public async Task<IActionResult> GetMessages(int targetId, string type)
         {
-            var idUtilisateur = int.Parse(User.Claims.First(c => c.Type == ClaimTypes.NameIdentifier).Value);
+            var idUtilisateurClaim = User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier);
+            if (idUtilisateurClaim == null) return Unauthorized();
+
+            int idUtilisateur = int.Parse(idUtilisateurClaim.Value);
+            Console.WriteLine("id ve hitany (message zone): " + idUtilisateur);
+
 
             List<MessageModel> messages = type == "groupe"
                 ? _service.GetMessagesByGroupId(connexion.ConnectPostgres(), targetId)
                 : _service.GetIndividualMessage(connexion.ConnectPostgres(), idUtilisateur, targetId);
+            Console.WriteLine("tafiditra??" );
 
             return Ok(messages);
         }
@@ -91,3 +97,4 @@ return Ok(discussions);
 
     }
 }
+

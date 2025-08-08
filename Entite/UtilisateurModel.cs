@@ -3,7 +3,7 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace MessagerieInterneAPI.Entite
 {
-    [Table("utilisateur")]
+    [Table("v_info_utilisateur")]
     public class UtilisateurModel
     {
         [Key]
@@ -15,24 +15,29 @@ namespace MessagerieInterneAPI.Entite
         public string Prenom { get; set; }
         [Column("matricule")]
         public string Matricule { get; set; }
-        [Column("id_role")]
-        public int Id_role { get; set; }
+        
         [Column("mdp")]
         public string Mdp { get; set; }
+        [Column("id_role")]
+        public int Id_role { get; set; }
+        [Column("role")]
+        public string Role { get; set; } // Added to hold the role name
 
         public UtilisateurModel()
         {
 
         }
 
-        public UtilisateurModel(int user, string nom, string prenom, string matricule, int role, string mdp)
+        public UtilisateurModel(int user, string nom, string prenom, string matricule,string mdp,  int role, string roleName)
         {
             Id_utilisateur = user;
             Nom = nom;
             Prenom = prenom;
             Matricule = matricule;
-            Id_role = role;
             Mdp = mdp;
+            Id_role = role;
+            Role = roleName;
+        
         }
 
 

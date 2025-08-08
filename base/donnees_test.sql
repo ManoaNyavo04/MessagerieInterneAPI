@@ -14,6 +14,7 @@ INSERT INTO utilisateur (nom, prenom, matricule, id_role, mdp) VALUES
 ('Rasoanaivo', 'Lalao', 'MAT002', 2, crypt('Lalao2025', gen_salt('bf'))),
 ('Andrianina', 'Fetra', 'MAT003', 2, crypt('Fetra2025', gen_salt('bf'))),
 ('Randrianarisoa', 'Tojo', 'MAT004', 2, crypt('Tojo2025', gen_salt('bf'))),
+
 ('Ratsimba', 'Hery', 'MAT005', 1, crypt('Hery2025', gen_salt('bf'))),
 ('Ramanandraibe', 'Miora', 'MAT006', 2, crypt('Miora2025', gen_salt('bf'))),
 ('Raherisoa', 'Tiana', 'MAT007', 2, crypt('Tiana2025', gen_salt('bf'))),
@@ -67,6 +68,12 @@ INSERT INTO message (id_expediteur, id_destinataire, contenu, date_envoie, id_gr
 (3, 4, 'Tojo, as-tu vu la dernière carte ?', NOW(), 2, 1),
 (5, 6, 'Miora, peux-tu vérifier les données de ce projet ?', NOW(), NULL, 1),
 (7, 8, 'Fanja, on se retrouve pour discuter du projet demain ?', NOW(), NULL, 1);
+
+INSERT INTO message (id_expediteur, id_destinataire, contenu, date_envoie, id_groupe_discussion, id_status_msg) VALUES
+(8, 7, 'okey ?', NOW(), NULL, 1);
+
+
+
 
 
 
