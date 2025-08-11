@@ -1,6 +1,7 @@
 using System.Text;
 using MessagerieInterneAPI;
 using MessagerieInterneAPI.Data;
+using MessagerieInterneAPI.Modules.Discussion;
 using MessagerieInterneAPI.Modules.Role;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
@@ -80,6 +81,7 @@ builder.Services.AddCors(options =>
 builder.Services.AddScoped<UtilisateurService>();
 builder.Services.AddScoped<GroupeDiscussionService>();
 builder.Services.AddScoped<RoleService>();
+builder.Services.AddScoped<MessageService>();
 builder.Services.AddSignalR();
 
 

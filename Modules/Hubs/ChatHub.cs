@@ -6,6 +6,12 @@ namespace MessagerieInterneAPI
 {
     public class ChatHub : Hub
     {
+        private readonly MessageService _messageService;
+
+        public ChatHub(MessageService messageService)
+        {
+            _messageService = messageService;
+        }
         public async Task SendMessage(string user, string message)
         {
             // Envoie le message à tous les clients connectés
@@ -25,6 +31,52 @@ namespace MessagerieInterneAPI
         }
 
         public async Task SendMessageToDiscussion(int idExp, int? idDest, int? idGroupe, string message, string groupName)
+        {
+            if (idGroupe == null && idDest == null)
+                throw new ArgumentException("Le message doit avoir un destinataire ou un groupe.");
+
+            var msg = new MessageModel
+            {
+                Id_expediteur = idExp,
+                Id_destinataire = idDest,
+                Id_groupe_discussion = idGroupe,
+                Contenu = message,
+                Date_envoie = DateTime.UtcNow,
+                Id_status_msg = 1
+            };
+
+            // var liason = new Connexion().ConnectPostgres();
+            // ✅ Insert en DB (connexion gérée en pool)
+            await _messageService.SendMessage(msg);
+
+            var payload = new
+            {
+                id_expediteur = idExp,
+                id_destinataire = idDest,
+                id_groupe_discussion = idGroupe,
+                contenu = message,
+                date_envoie = DateTime.UtcNow.ToString("o")
+            };
+
+            // ✅ Diffusion ciblée
+            if (idGroupe != null)
+            {
+                await Clients.Group(groupName).SendAsync("ReceiveMessage", payload);
+            }
+            else if (idDest != null)
+            {
+                await Clients.User(idDest.ToString()).SendAsync("ReceiveMessage", payload);
+                await Clients.User(idExp.ToString()).SendAsync("ReceiveMessage", payload);
+            }
+        }
+
+        public override Task OnConnectedAsync()
+        {
+            // Ici tu pourrais ajouter automatiquement l'utilisateur à ses groupes
+            return base.OnConnectedAsync();
+        }
+
+        /*public async Task SendMessageToDiscussion(int idExp, int? idDest, int? idGroupe, string message, string groupName)
         {
             try
             {
@@ -89,7 +141,7 @@ namespace MessagerieInterneAPI
                 Console.WriteLine(ex.StackTrace);
                 throw;
             }
-    }
+        }*/
 
 
 

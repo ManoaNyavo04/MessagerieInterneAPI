@@ -109,3 +109,11 @@ from utilisateur u
 join role r on r.id_role = u.id_role order by u.id_utilisateur;
 
 
+
+select id_utilisateur, nom || ' ' || prenom as nom, matricule 
+from utilisateur where lower(nom) 
+like '%rak%' 
+or prenom like '%rak%' 
+or matricule like '%rak%';
+
+

@@ -41,7 +41,7 @@ namespace MessagerieInterneAPI.Modules.Discussion
             return Ok(messages);
         }
 
-        [HttpPost("sendMessage")]
+        /*[HttpPost("sendMessage")]
         public async Task<IActionResult> SendMessage(MessageModel message)
         {
             _service.SendMessage(connexion.ConnectPostgres(), message);

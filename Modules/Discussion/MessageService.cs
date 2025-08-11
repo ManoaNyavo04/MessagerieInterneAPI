@@ -7,6 +7,17 @@ namespace MessagerieInterneAPI.Modules.Discussion
 {
     public class MessageService
     {
+        private readonly NpgsqlDataSource _dataSource;
+
+        public MessageService(NpgsqlDataSource dataSource)
+        {
+            _dataSource = dataSource;
+        }
+
+        public MessageService()
+        {
+        }
+
         public List<MessageModel> GetMessagesByGroupId(NpgsqlConnection liasonBase, int groupId)
         {
             List<MessageModel> messages = new List<MessageModel>();
@@ -124,8 +135,27 @@ namespace MessagerieInterneAPI.Modules.Discussion
             return messages;
         }
 
+        public async Task SendMessage(MessageModel message)
+        {
+            const string sql = "INSERT INTO message (id_expediteur, id_destinataire, id_groupe_discussion, contenu, date_envoie, id_status_msg) VALUES (@id_expediteur, @id_destinataire, @id_groupe_discussion, @contenu, @date_envoie, @id_status_msg)";
 
-        public async Task SendMessage(NpgsqlConnection liasonBase, MessageModel message)
+            using var liasonBase = new Connexion().ConnectPostgres();
+            liasonBase.Open();
+
+            using var cmd = new NpgsqlCommand(sql, liasonBase);
+            cmd.Parameters.AddWithValue("@id_expediteur", message.Id_expediteur);
+            cmd.Parameters.AddWithValue("@id_destinataire", (object?)message.Id_destinataire ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("@id_groupe_discussion", (object?)message.Id_groupe_discussion ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("@contenu", message.Contenu);
+            cmd.Parameters.AddWithValue("@date_envoie", message.Date_envoie);
+            cmd.Parameters.AddWithValue("@id_status_msg", message.Id_status_msg);
+
+            await cmd.ExecuteNonQueryAsync();
+        }
+
+
+
+        /*public async Task SendMessage(NpgsqlConnection liasonBase, MessageModel message)
         {
             Console.WriteLine("ato amin'ny sendMessage");
 
@@ -176,7 +206,7 @@ namespace MessagerieInterneAPI.Modules.Discussion
                 }
             }
 
-        }
+        }*/
 
         public List<DiscussionModel> GetGrpDiscussionByUser(int userId, NpgsqlConnection liasonBase)
         {
