@@ -125,7 +125,7 @@ namespace MessagerieInterneAPI.Modules.Discussion
         }
 
 
-        public void SendMessage(NpgsqlConnection liasonBase, MessageModel message)
+        public async Task SendMessage(NpgsqlConnection liasonBase, MessageModel message)
         {
             Console.WriteLine("ato amin'ny sendMessage");
 

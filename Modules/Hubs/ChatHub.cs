@@ -47,31 +47,36 @@ namespace MessagerieInterneAPI
                 };
 
                 var liason = new Connexion().ConnectPostgres();
-                new MessageService().SendMessage(liason, msg);
-
-                // ✅ Logique de diffusion correct selon le type
-                if (idGroupe != null)
-                {
-                    Console.WriteLine($"📤 Envoi au groupe {groupName} (ID: {idGroupe})");
-                    await Clients.Group(groupName).SendAsync("ReceiveMessage", new
-                        {
-                            id_expediteur = idExp,
-                            id_groupe_discussion = idGroupe,
-                            contenu = message,
-                            date_envoie = DateTime.UtcNow.ToString("o")
-                        });
-
-                }
-                else
-                {
-                    Console.WriteLine($"📤 Envoi aux utilisateurs {idExp} et {idDest}");
-                    var payload = new
+                await new MessageService().SendMessage(liason, msg);
+                
+                 var payload = new
                     {
                         id_expediteur = idExp,
                         id_destinataire = idDest,
                         contenu = message,
                         date_envoie = DateTime.UtcNow.ToString("o")
                     };
+                await Clients.All.SendAsync("ReceiveMessage", payload);
+                await Clients.All.SendAsync("ReceiveMessage", payload);
+
+                // ✅ Logique de diffusion correct selon le type
+                if (idGroupe != null)
+                {
+                    Console.WriteLine($"📤 Envoi au groupe {groupName} (ID: {idGroupe})");
+                    await Clients.Group(groupName).SendAsync("ReceiveMessage", new
+                    {
+                        id_expediteur = idExp,
+                        id_groupe_discussion = idGroupe,
+                        contenu = message,
+                        date_envoie = DateTime.UtcNow.ToString("o")
+                    });
+                    
+
+                }
+                else
+                {
+                    Console.WriteLine($"📤 Envoi aux utilisateurs {idExp} et {idDest}");
+
 
                     await Clients.User(idExp.ToString()).SendAsync("ReceiveMessage", payload);
                     await Clients.User(idDest.ToString()).SendAsync("ReceiveMessage", payload);
