@@ -1,6 +1,7 @@
 ﻿using System.Data;
 using MessagerieInterneAPI.Data;
 using MessagerieInterneAPI.Entite;
+using Microsoft.EntityFrameworkCore;
 using Npgsql;
 
 namespace MessagerieInterneAPI.Modules.Discussion
@@ -8,6 +9,7 @@ namespace MessagerieInterneAPI.Modules.Discussion
     public class MessageService
     {
         private readonly NpgsqlDataSource _dataSource;
+        private readonly AppDbContext _context;
 
         public MessageService(NpgsqlDataSource dataSource)
         {
@@ -251,7 +253,7 @@ namespace MessagerieInterneAPI.Modules.Discussion
 
             return discussions;
         }
-        
+
 
         public List<DiscussionModel> GetDiscussionIndividuelleByUser(int userId, NpgsqlConnection liasonBase)
         {
@@ -311,5 +313,115 @@ namespace MessagerieInterneAPI.Modules.Discussion
 
             return discussions;
         }
+
+
+        /*public async Task<DiscussionModel> VerifOuCreeDiscussionIndividuelle(NpgsqlConnection liasonBase, int idExpediteur, int idDestinataire)
+        {
+            var existe = await _context.Message
+             .AnyAsync(m =>
+                 m.Id_groupe_discussion == null &&
+                 ((m.Id_expediteur == idExpediteur && m.Id_destinataire == idDestinataire) ||
+                 (m.Id_expediteur == idDestinataire && m.Id_destinataire == idExpediteur))
+             );
+
+            if (existe != null)
+            {
+                var discussions = GetDiscussionIndividuelleByUser(idExpediteur, liasonBase);
+                return discussions.FirstOrDefault();
+            }
+            else
+            {
+                var newDiscussion = new DiscussionModel
+                {
+                    Id = m.Id_destinataire,
+                    Nom = "Nouvelle Discussion",
+                    Type = "prive"
+                };
+                return newDiscussion;
+            }
+            
+        }*/
+
+        public List<DiscussionModel> searchDiscussion(NpgsqlConnection liasonBase, int idExpediteur, int idDestinataire)
+        {
+            List<DiscussionModel> discussions = new List<DiscussionModel>();
+            String sql = @"
+                SELECT *
+                FROM v_discussions_individuelles
+                WHERE (
+                    (id_expediteur = @id1 AND id_destinataire = @id2) OR
+                    (id_expediteur = @id2 AND id_destinataire = @id1)
+                )";
+
+            if (liasonBase == null || liasonBase.State == ConnectionState.Closed)
+            {
+                Connexion connexion = new Connexion();
+                liasonBase = connexion.ConnectPostgres();
+                liasonBase.Open();
+            }
+
+            try
+            {
+                NpgsqlCommand cmd = new NpgsqlCommand(sql, liasonBase);
+                cmd.Parameters.AddWithValue("@id1", idExpediteur);
+                cmd.Parameters.AddWithValue("@id2", idDestinataire);
+                NpgsqlDataReader reader = cmd.ExecuteReader();
+
+                while (reader.Read())
+                {
+                    int rowId = reader.GetOrdinal("id_destinataire");
+                    int rowNom = reader.GetOrdinal("nom_destinataire");
+                    DiscussionModel discussion = new DiscussionModel
+                    {
+                        Id = reader.GetInt32(rowId),
+                        Nom = reader.GetString(rowNom),
+                        Type = "prive"
+                    };
+                    discussions.Add(discussion);
+                }
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e.Message);
+            }
+            finally
+            {
+                if (liasonBase != null)
+                {
+                    liasonBase.Close();
+                }
+            }
+
+            return discussions;
+        }
+
+        public async Task<DiscussionModel> VerifOuCreeDiscussionIndividuelle(NpgsqlConnection connexion,
+            int idExpediteur, DiscussionModel discussion)
+        {
+
+            Console.WriteLine(discussion.Id + " " + discussion.Nom);
+            // var messages = GetDiscussionIndividuelleByUser(idExpediteur, connexion);
+            var nouvelleDiscussion = searchDiscussion(connexion, idExpediteur, discussion.Id);
+
+            if (nouvelleDiscussion.Any())
+            {
+
+                Console.WriteLine("✅ Discussion trouvée, récupération des messages...");
+                var messages = GetDiscussionIndividuelleByUser(idExpediteur, connexion);
+                return messages.FirstOrDefault();
+            }
+            else
+            {
+                Console.WriteLine("❌ Discussion inexistante, création en cours..." + nouvelleDiscussion.FirstOrDefault()?.Id);
+                // ❌ Discussion inexistante → on la crée
+                // var nouvelleDiscussion = CreateNewDiscussion(connexion, idExpediteur, idDestinataire);
+                var discuss = new DiscussionModel(discussion.Id, discussion.Nom, "prive");
+
+                return discuss;
+            }
+        }
+
+
     }
+    
 }

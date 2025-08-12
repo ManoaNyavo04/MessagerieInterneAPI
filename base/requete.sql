@@ -116,4 +116,11 @@ like '%rak%'
 or prenom like '%rak%' 
 or matricule like '%rak%';
 
+SELECT *
+FROM v_discussions_individuelles
+WHERE (
+    (id_expediteur = 5 AND id_destinataire = 1) OR
+    (id_expediteur = 1 AND id_destinataire = 5)
+);
+
 

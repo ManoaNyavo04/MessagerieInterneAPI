@@ -83,14 +83,12 @@ namespace MessagerieInterneAPI
                 // Matricule existe déjà
                 return false;
             }
-            
+
 
             InsertUtilisateur(liasonBase, utilisateur);
             return true;
-   
-        }
-        
 
+        }
 
         public UtilisateurModel GetProfilUtilisateur(UtilisateurModel user)
         {
@@ -119,7 +117,8 @@ namespace MessagerieInterneAPI
                 NpgsqlCommand cmd = new NpgsqlCommand(sql, liaisonbase);
 
                 NpgsqlDataReader reader = cmd.ExecuteReader();
-                while(reader.Read()){
+                while (reader.Read())
+                {
                     UtilisateurModel user = new UtilisateurModel();
                     user.Id_utilisateur = (reader.GetInt32(0));
                     user.Nom = (reader.GetString(1));
@@ -136,7 +135,7 @@ namespace MessagerieInterneAPI
             {
                 Console.WriteLine(e.Message);
             }
-            
+
             finally
             {
                 if (liaisonbase != null)
@@ -145,6 +144,53 @@ namespace MessagerieInterneAPI
                 }
             }
             return allUtilisateurs;
+        }
+
+        public List<UtilisateurModel> SearchUtilisateur(NpgsqlConnection liasonBase, string searchTerm)
+        {
+            List<UtilisateurModel> results = new List<UtilisateurModel>();
+            string sql = "SELECT * FROM v_info_utilisateur WHERE LOWER(nom) LIKE LOWER(@searchTerm) OR LOWER(prenom) LIKE LOWER(@searchTerm) OR LOWER(matricule) LIKE LOWER(@searchTerm)";
+
+            if (liasonBase == null || liasonBase.State == ConnectionState.Closed)
+            {
+                Connexion connexion = new Connexion();
+                liasonBase = connexion.ConnectPostgres();
+                liasonBase.Open();
+            }
+
+            try
+            {
+                NpgsqlCommand cmd = new NpgsqlCommand(sql, liasonBase);
+                cmd.Parameters.AddWithValue("@searchTerm", "%" + searchTerm + "%");
+
+                NpgsqlDataReader reader = cmd.ExecuteReader();
+                while (reader.Read())
+                {
+                    UtilisateurModel user = new UtilisateurModel();
+                    user.Id_utilisateur = (reader.GetInt32(0));
+                    user.Nom = (reader.GetString(1));
+                    user.Prenom = (reader.GetString(2));
+                    user.Matricule = (reader.GetString(3));
+                    user.Mdp = (reader.GetString(4));
+                    user.Id_role = (reader.GetInt32(5));
+                    user.Role = (reader.GetString(6));
+
+                    results.Add(user);
+                }
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e.Message);
+            }
+            finally
+            {
+                if (liasonBase != null)
+                {
+                    liasonBase.Close();
+                }
+            }
+
+            return results;
         }
     }
 }

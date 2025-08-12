@@ -89,12 +89,30 @@ return Ok(discussions);
             List<MessageModel> messages = type == "groupe"
                 ? _service.GetMessagesByGroupId(connexion.ConnectPostgres(), targetId)
                 : _service.GetIndividualMessage(connexion.ConnectPostgres(), idUtilisateur, targetId);
-            Console.WriteLine("tafiditra??" );
+            Console.WriteLine("tafiditra??");
 
             return Ok(messages);
         }
 
+        [HttpPost("demarrerDiscussion")]
+        public async Task<IActionResult> CreateNewDiscussion([FromBody] DiscussionModel model)
+        {
+            var idUtilisateurClaim = User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier);
+            if (idUtilisateurClaim == null) return Unauthorized();
+            int idUtilisateur = int.Parse(idUtilisateurClaim.Value);
 
+            Console.WriteLine("id ve hitany (demarrer discussion): " + idUtilisateur);
+            var conn = connexion.ConnectPostgres();
+            if (conn == null)
+            {
+                return StatusCode(500, "Database connection failed.");
+
+            }
+
+            var discussion = _service.VerifOuCreeDiscussionIndividuelle(conn, idUtilisateur, model);
+
+            return Ok(discussion);
+        }
     }
 }
 
