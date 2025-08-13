@@ -51,6 +51,7 @@ namespace MessagerieInterneAPI
 
             var payload = new
             {
+                id_discussion = idGroupe ?? idDest,
                 id_expediteur = idExp,
                 id_destinataire = idDest,
                 id_groupe_discussion = idGroupe,
@@ -75,6 +76,13 @@ namespace MessagerieInterneAPI
             // Ici tu pourrais ajouter automatiquement l'utilisateur à ses groupes
             return base.OnConnectedAsync();
         }
+
+        public async Task NotifyMessagesRead(int discussionId, int userId)
+        {
+            await Clients.Group($"discussion_{discussionId}")
+                .SendAsync("MessagesRead", new { discussionId, userId });
+        }
+
 
         /*public async Task SendMessageToDiscussion(int idExp, int? idDest, int? idGroupe, string message, string groupName)
         {

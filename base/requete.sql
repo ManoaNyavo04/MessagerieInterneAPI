@@ -123,4 +123,30 @@ WHERE (
     (id_expediteur = 1 AND id_destinataire = 5)
 );
 
+SELECT 
+    COALESCE(id_groupe_discussion, id_expediteur) AS id_discussion,
+    id_destinataire,
+    COUNT(*) AS unread_count
+FROM message
+WHERE id_expediteur = 1
+  AND id_status_msg = 1
+GROUP BY COALESCE(id_groupe_discussion, id_expediteur, id_destinataire);
+
+UPDATE message
+SET id_status_msg = 2
+WHERE id_destinataire = @idUser
+  AND COALESCE(id_groupe_discussion, id_expediteur) = @idDiscussion
+  AND id_status_msg = 1;
+
+
+  SELECT 
+    COALESCE(id_groupe_discussion, id_expediteur) AS id_discussion,
+    COUNT(*) AS unread_count
+FROM message
+WHERE id_destinataire = 7
+AND id_status_msg = 1
+GROUP BY COALESCE(id_groupe_discussion, id_expediteur);
+
+
+
 

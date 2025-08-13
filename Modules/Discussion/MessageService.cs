@@ -421,6 +421,55 @@ namespace MessagerieInterneAPI.Modules.Discussion
             }
         }
 
+        public async Task<Dictionary<int, int>> GetUnreadCounts(int idUser)
+        {
+            const string sql = @"
+                SELECT 
+                    COALESCE(id_groupe_discussion, id_expediteur) AS id_discussion,
+                    COUNT(*) AS unread_count
+                FROM message
+                WHERE id_destinataire = @idUser
+                AND id_status_msg = 1
+                GROUP BY COALESCE(id_groupe_discussion, id_expediteur)";
+
+            using var conn = new Connexion().ConnectPostgres();
+            await conn.OpenAsync();
+
+            using var cmd = new NpgsqlCommand(sql, conn);
+            cmd.Parameters.AddWithValue("@idUser", idUser);
+
+            using var reader = await cmd.ExecuteReaderAsync();
+            var result = new Dictionary<int, int>();
+
+            while (await reader.ReadAsync())
+            {
+                result[reader.GetInt32(0)] = reader.GetInt32(1);
+            }
+
+            return result;
+        }
+
+        public async Task MarkMessagesAsRead(int idUser, int idDiscussion)
+        {
+            const string sql = @"
+                UPDATE message
+                SET id_status_msg = 3
+                WHERE id_destinataire = @idUser
+                AND COALESCE(id_groupe_discussion, id_expediteur) = @idDiscussion
+                AND id_status_msg = 1";
+
+            using var conn = new Connexion().ConnectPostgres();
+            await conn.OpenAsync();
+
+            using var cmd = new NpgsqlCommand(sql, conn);
+            cmd.Parameters.AddWithValue("@idUser", idUser);
+            cmd.Parameters.AddWithValue("@idDiscussion", idDiscussion);
+
+            await cmd.ExecuteNonQueryAsync();
+        }
+
+
+
 
     }
     

@@ -2,6 +2,7 @@
 using MessagerieInterneAPI.Data;
 using MessagerieInterneAPI.Entite;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.SignalR;
 
 namespace MessagerieInterneAPI.Modules.Discussion
 {
@@ -12,6 +13,14 @@ namespace MessagerieInterneAPI.Modules.Discussion
         private readonly AppDbContext _context;
         private readonly MessageService _service;
         private Connexion connexion = new Connexion();
+        private readonly IHubContext<ChatHub> _hubContext;
+
+        public MessageController(AppDbContext context, IHubContext<ChatHub> hubContext)
+        {
+            _context = context;
+            _service = new MessageService();
+            _hubContext = hubContext;
+        }
 
         public MessageController(AppDbContext context)
         {
@@ -113,6 +122,38 @@ return Ok(discussions);
 
             return Ok(discussion);
         }
+
+        [HttpGet("messagesNonLus")]
+        public async Task<IActionResult> GetUnreadCounts()
+        {
+            var idUtilisateurClaim = User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier);
+            if (idUtilisateurClaim == null) return Unauthorized();
+
+            int idUtilisateur = int.Parse(idUtilisateurClaim.Value);
+            // Console.WriteLine("id ve hitany (message zone): " + idUtilisateur);
+
+            var unreadCounts = await _service.GetUnreadCounts(idUtilisateur);
+            Console.WriteLine("excuterrrrr" + idUtilisateur);
+            return Ok(unreadCounts);
+        }
+
+        [HttpPut("lireMessage")]
+        public async Task<IActionResult> MarkMessagesAsRead(int discussionId)
+        {
+            var idUtilisateurClaim = User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier);
+            if (idUtilisateurClaim == null) return Unauthorized();
+
+            int idUtilisateur = int.Parse(idUtilisateurClaim.Value);
+            Console.WriteLine("id ve hitany (message zone): " + idUtilisateur);
+
+            await _service.MarkMessagesAsRead(idUtilisateur, discussionId);
+            // await _hubContext.Clients.Group($"discussion_{discussionId}")
+            //     .SendAsync("MessagesRead", new { discussionId, userId = idUtilisateur });
+
+            return Ok();
+        }
+
+
     }
 }
 
