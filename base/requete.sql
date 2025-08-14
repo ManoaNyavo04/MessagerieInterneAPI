@@ -70,18 +70,18 @@ ORDER BY date_envoie;
 
 SELECT 
     CASE 
-        WHEN id_expediteur = 7 THEN id_destinataire
+        WHEN id_expediteur = 10 THEN id_destinataire
         ELSE id_expediteur
     END AS id_autre_utilisateur,
     
     CASE 
-        WHEN id_expediteur = 7 THEN nom_destinataire
+        WHEN id_expediteur = 10 THEN nom_destinataire
         ELSE nom_expediteur
     END AS nom_autre_utilisateur,
     
     'prive' AS type
 FROM v_discussions_individuelles
-WHERE id_expediteur = 7 OR id_destinataire = 7
+WHERE id_expediteur = 10 OR id_destinataire = 10
 GROUP BY id_autre_utilisateur, nom_autre_utilisateur;
 
 

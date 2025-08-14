@@ -53,6 +53,7 @@ namespace MessagerieInterneAPI
             {
                 id_discussion = idGroupe ?? idDest,
                 id_expediteur = idExp,
+                expediteur_nom = groupName,
                 id_destinataire = idDest,
                 id_groupe_discussion = idGroupe,
                 contenu = message,

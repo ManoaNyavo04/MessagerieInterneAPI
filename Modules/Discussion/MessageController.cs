@@ -15,12 +15,6 @@ namespace MessagerieInterneAPI.Modules.Discussion
         private Connexion connexion = new Connexion();
         private readonly IHubContext<ChatHub> _hubContext;
 
-        public MessageController(AppDbContext context, IHubContext<ChatHub> hubContext)
-        {
-            _context = context;
-            _service = new MessageService();
-            _hubContext = hubContext;
-        }
 
         public MessageController(AppDbContext context)
         {
