@@ -2,6 +2,7 @@
 using MessagerieInterneAPI.Data;
 using MessagerieInterneAPI.Entite;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.SignalR;
 
 namespace MessagerieInterneAPI.Modules.Discussion
 {
@@ -12,6 +13,8 @@ namespace MessagerieInterneAPI.Modules.Discussion
         private readonly AppDbContext _context;
         private readonly MessageService _service;
         private Connexion connexion = new Connexion();
+        private readonly IHubContext<ChatHub> _hubContext;
+
 
         public MessageController(AppDbContext context)
         {
@@ -41,7 +44,7 @@ namespace MessagerieInterneAPI.Modules.Discussion
             return Ok(messages);
         }
 
-        [HttpPost("sendMessage")]
+        /*[HttpPost("sendMessage")]
         public async Task<IActionResult> SendMessage(MessageModel message)
         {
             _service.SendMessage(connexion.ConnectPostgres(), message);
@@ -89,9 +92,59 @@ return Ok(discussions);
             List<MessageModel> messages = type == "groupe"
                 ? _service.GetMessagesByGroupId(connexion.ConnectPostgres(), targetId)
                 : _service.GetIndividualMessage(connexion.ConnectPostgres(), idUtilisateur, targetId);
-            Console.WriteLine("tafiditra??" );
+            Console.WriteLine("tafiditra??");
 
             return Ok(messages);
+        }
+
+        [HttpPost("demarrerDiscussion")]
+        public async Task<IActionResult> CreateNewDiscussion([FromBody] DiscussionModel model)
+        {
+            var idUtilisateurClaim = User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier);
+            if (idUtilisateurClaim == null) return Unauthorized();
+            int idUtilisateur = int.Parse(idUtilisateurClaim.Value);
+
+            Console.WriteLine("id ve hitany (demarrer discussion): " + idUtilisateur);
+            var conn = connexion.ConnectPostgres();
+            if (conn == null)
+            {
+                return StatusCode(500, "Database connection failed.");
+
+            }
+
+            var discussion = _service.VerifOuCreeDiscussionIndividuelle(conn, idUtilisateur, model);
+
+            return Ok(discussion);
+        }
+
+        [HttpGet("messagesNonLus")]
+        public async Task<IActionResult> GetUnreadCounts()
+        {
+            var idUtilisateurClaim = User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier);
+            if (idUtilisateurClaim == null) return Unauthorized();
+
+            int idUtilisateur = int.Parse(idUtilisateurClaim.Value);
+            // Console.WriteLine("id ve hitany (message zone): " + idUtilisateur);
+
+            var unreadCounts = await _service.GetUnreadCounts(idUtilisateur);
+            Console.WriteLine("excuterrrrr" + idUtilisateur);
+            return Ok(unreadCounts);
+        }
+
+        [HttpPut("lireMessage")]
+        public async Task<IActionResult> MarkMessagesAsRead(int discussionId)
+        {
+            var idUtilisateurClaim = User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier);
+            if (idUtilisateurClaim == null) return Unauthorized();
+
+            int idUtilisateur = int.Parse(idUtilisateurClaim.Value);
+            Console.WriteLine("id ve hitany (message zone): " + idUtilisateur);
+
+            await _service.MarkMessagesAsRead(idUtilisateur, discussionId);
+            // await _hubContext.Clients.Group($"discussion_{discussionId}")
+            //     .SendAsync("MessagesRead", new { discussionId, userId = idUtilisateur });
+
+            return Ok();
         }
 
 

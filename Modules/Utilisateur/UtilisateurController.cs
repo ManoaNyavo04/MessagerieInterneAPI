@@ -57,7 +57,7 @@ namespace MessagerieInterneAPI.Modules.Utilisateur
             var result = _service.GetAllUtilisateurs(connex);
             return Ok(result);
         }
-        
+
         [HttpPost("addUtilisateur")]
         public async Task<IActionResult> AddUtilisateur([FromBody] UtilisateurModel utilisateur)
         {
@@ -68,6 +68,15 @@ namespace MessagerieInterneAPI.Modules.Utilisateur
                 return BadRequest("Matricule déjà utilisé.");
             }
             return Ok(new { result, message = "Utilisateur ajouté avec succès." });
+        }
+
+        [HttpGet("searchUser")]
+        public async Task<IActionResult> SearchUser([FromQuery] string searchTerm)
+        {
+            Connexion connect = new Connexion();
+            var connex = connect.ConnectPostgres();
+            var result = _service.SearchUtilisateur(connex, searchTerm);
+            return Ok(result);
         }
     }
 }

@@ -70,18 +70,18 @@ ORDER BY date_envoie;
 
 SELECT 
     CASE 
-        WHEN id_expediteur = 7 THEN id_destinataire
+        WHEN id_expediteur = 10 THEN id_destinataire
         ELSE id_expediteur
     END AS id_autre_utilisateur,
     
     CASE 
-        WHEN id_expediteur = 7 THEN nom_destinataire
+        WHEN id_expediteur = 10 THEN nom_destinataire
         ELSE nom_expediteur
     END AS nom_autre_utilisateur,
     
     'prive' AS type
 FROM v_discussions_individuelles
-WHERE id_expediteur = 7 OR id_destinataire = 7
+WHERE id_expediteur = 10 OR id_destinataire = 10
 GROUP BY id_autre_utilisateur, nom_autre_utilisateur;
 
 
@@ -107,5 +107,46 @@ GROUP BY id_autre_utilisateur, nom_autre_utilisateur;
 select u.id_utilisateur, u.nom, u.prenom, u.matricule, u.mdp, u.id_role, r.role 
 from utilisateur u  
 join role r on r.id_role = u.id_role order by u.id_utilisateur;
+
+
+
+select id_utilisateur, nom || ' ' || prenom as nom, matricule 
+from utilisateur where lower(nom) 
+like '%rak%' 
+or prenom like '%rak%' 
+or matricule like '%rak%';
+
+SELECT *
+FROM v_discussions_individuelles
+WHERE (
+    (id_expediteur = 5 AND id_destinataire = 1) OR
+    (id_expediteur = 1 AND id_destinataire = 5)
+);
+
+SELECT 
+    COALESCE(id_groupe_discussion, id_expediteur) AS id_discussion,
+    id_destinataire,
+    COUNT(*) AS unread_count
+FROM message
+WHERE id_expediteur = 1
+  AND id_status_msg = 1
+GROUP BY COALESCE(id_groupe_discussion, id_expediteur, id_destinataire);
+
+UPDATE message
+SET id_status_msg = 2
+WHERE id_destinataire = @idUser
+  AND COALESCE(id_groupe_discussion, id_expediteur) = @idDiscussion
+  AND id_status_msg = 1;
+
+
+  SELECT 
+    COALESCE(id_groupe_discussion, id_expediteur) AS id_discussion,
+    COUNT(*) AS unread_count
+FROM message
+WHERE id_destinataire = 7
+AND id_status_msg = 1
+GROUP BY COALESCE(id_groupe_discussion, id_expediteur);
+
+
 
 

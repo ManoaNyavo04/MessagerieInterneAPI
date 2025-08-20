@@ -1,12 +1,25 @@
 ﻿using System.Data;
 using MessagerieInterneAPI.Data;
 using MessagerieInterneAPI.Entite;
+using Microsoft.EntityFrameworkCore;
 using Npgsql;
 
 namespace MessagerieInterneAPI.Modules.Discussion
 {
     public class MessageService
     {
+        private readonly NpgsqlDataSource _dataSource;
+        private readonly AppDbContext _context;
+
+        public MessageService(NpgsqlDataSource dataSource)
+        {
+            _dataSource = dataSource;
+        }
+
+        public MessageService()
+        {
+        }
+
         public List<MessageModel> GetMessagesByGroupId(NpgsqlConnection liasonBase, int groupId)
         {
             List<MessageModel> messages = new List<MessageModel>();
@@ -124,8 +137,27 @@ namespace MessagerieInterneAPI.Modules.Discussion
             return messages;
         }
 
+        public async Task SendMessage(MessageModel message)
+        {
+            const string sql = "INSERT INTO message (id_expediteur, id_destinataire, id_groupe_discussion, contenu, date_envoie, id_status_msg) VALUES (@id_expediteur, @id_destinataire, @id_groupe_discussion, @contenu, @date_envoie, @id_status_msg)";
 
-        public async Task SendMessage(NpgsqlConnection liasonBase, MessageModel message)
+            using var liasonBase = new Connexion().ConnectPostgres();
+            liasonBase.Open();
+
+            using var cmd = new NpgsqlCommand(sql, liasonBase);
+            cmd.Parameters.AddWithValue("@id_expediteur", message.Id_expediteur);
+            cmd.Parameters.AddWithValue("@id_destinataire", (object?)message.Id_destinataire ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("@id_groupe_discussion", (object?)message.Id_groupe_discussion ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("@contenu", message.Contenu);
+            cmd.Parameters.AddWithValue("@date_envoie", message.Date_envoie);
+            cmd.Parameters.AddWithValue("@id_status_msg", message.Id_status_msg);
+
+            await cmd.ExecuteNonQueryAsync();
+        }
+
+
+
+        /*public async Task SendMessage(NpgsqlConnection liasonBase, MessageModel message)
         {
             Console.WriteLine("ato amin'ny sendMessage");
 
@@ -176,7 +208,7 @@ namespace MessagerieInterneAPI.Modules.Discussion
                 }
             }
 
-        }
+        }*/
 
         public List<DiscussionModel> GetGrpDiscussionByUser(int userId, NpgsqlConnection liasonBase)
         {
@@ -221,7 +253,7 @@ namespace MessagerieInterneAPI.Modules.Discussion
 
             return discussions;
         }
-        
+
 
         public List<DiscussionModel> GetDiscussionIndividuelleByUser(int userId, NpgsqlConnection liasonBase)
         {
@@ -281,5 +313,215 @@ namespace MessagerieInterneAPI.Modules.Discussion
 
             return discussions;
         }
+
+
+        /*public async Task<DiscussionModel> VerifOuCreeDiscussionIndividuelle(NpgsqlConnection liasonBase, int idExpediteur, int idDestinataire)
+        {
+            var existe = await _context.Message
+             .AnyAsync(m =>
+                 m.Id_groupe_discussion == null &&
+                 ((m.Id_expediteur == idExpediteur && m.Id_destinataire == idDestinataire) ||
+                 (m.Id_expediteur == idDestinataire && m.Id_destinataire == idExpediteur))
+             );
+
+            if (existe != null)
+            {
+                var discussions = GetDiscussionIndividuelleByUser(idExpediteur, liasonBase);
+                return discussions.FirstOrDefault();
+            }
+            else
+            {
+                var newDiscussion = new DiscussionModel
+                {
+                    Id = m.Id_destinataire,
+                    Nom = "Nouvelle Discussion",
+                    Type = "prive"
+                };
+                return newDiscussion;
+            }
+            
+        }*/
+
+        public List<DiscussionModel> searchDiscussion(NpgsqlConnection liasonBase, int idExpediteur, int idDestinataire)
+        {
+            List<DiscussionModel> discussions = new List<DiscussionModel>();
+            String sql = @"
+                SELECT *
+                FROM v_discussions_individuelles
+                WHERE (
+                    (id_expediteur = @id1 AND id_destinataire = @id2) OR
+                    (id_expediteur = @id2 AND id_destinataire = @id1)
+                )";
+
+            if (liasonBase == null || liasonBase.State == ConnectionState.Closed)
+            {
+                Connexion connexion = new Connexion();
+                liasonBase = connexion.ConnectPostgres();
+                liasonBase.Open();
+            }
+
+            try
+            {
+                NpgsqlCommand cmd = new NpgsqlCommand(sql, liasonBase);
+                cmd.Parameters.AddWithValue("@id1", idExpediteur);
+                cmd.Parameters.AddWithValue("@id2", idDestinataire);
+                NpgsqlDataReader reader = cmd.ExecuteReader();
+
+                while (reader.Read())
+                {
+                    int rowId = reader.GetOrdinal("id_destinataire");
+                    int rowNom = reader.GetOrdinal("nom_destinataire");
+                    DiscussionModel discussion = new DiscussionModel
+                    {
+                        Id = reader.GetInt32(rowId),
+                        Nom = reader.GetString(rowNom),
+                        Type = "prive"
+                    };
+                    discussions.Add(discussion);
+                }
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e.Message);
+            }
+            finally
+            {
+                if (liasonBase != null)
+                {
+                    liasonBase.Close();
+                }
+            }
+
+            return discussions;
+        }
+
+        public async Task<DiscussionModel> VerifOuCreeDiscussionIndividuelle(NpgsqlConnection connexion,
+            int idExpediteur, DiscussionModel discussion)
+        {
+
+            Console.WriteLine(discussion.Id + " " + discussion.Nom);
+            // var messages = GetDiscussionIndividuelleByUser(idExpediteur, connexion);
+            var nouvelleDiscussion = searchDiscussion(connexion, idExpediteur, discussion.Id);
+
+            if (nouvelleDiscussion.Any())
+            {
+
+                Console.WriteLine("✅ Discussion trouvée, récupération des messages...");
+                var messages = GetDiscussionIndividuelleByUser(idExpediteur, connexion);
+                return messages.FirstOrDefault();
+            }
+            else
+            {
+                Console.WriteLine("❌ Discussion inexistante, création en cours..." + nouvelleDiscussion.FirstOrDefault()?.Id);
+                // ❌ Discussion inexistante → on la crée
+                // var nouvelleDiscussion = CreateNewDiscussion(connexion, idExpediteur, idDestinataire);
+                var discuss = new DiscussionModel(discussion.Id, discussion.Nom, "prive");
+
+                return discuss;
+            }
+        }
+
+        public async Task<Dictionary<int, int>> GetUnreadCounts(int idUser)
+        {
+            const string sql = @"
+                SELECT 
+                    COALESCE(id_groupe_discussion, id_expediteur) AS id_discussion,
+                    COUNT(*) AS unread_count
+                FROM message
+                WHERE id_destinataire = @idUser
+                AND id_status_msg = 1
+                GROUP BY COALESCE(id_groupe_discussion, id_expediteur)";
+
+            using var conn = new Connexion().ConnectPostgres();
+            await conn.OpenAsync();
+
+            using var cmd = new NpgsqlCommand(sql, conn);
+            cmd.Parameters.AddWithValue("@idUser", idUser);
+
+            using var reader = await cmd.ExecuteReaderAsync();
+            var result = new Dictionary<int, int>();
+
+            while (await reader.ReadAsync())
+            {
+                result[reader.GetInt32(0)] = reader.GetInt32(1);
+            }
+
+            return result;
+        }
+
+        public async Task MarkMessagesAsRead(int idUser, int idDiscussion)
+        {
+            const string sql = @"
+                UPDATE message
+                SET id_status_msg = 3
+                WHERE id_destinataire = @idUser
+                AND COALESCE(id_groupe_discussion, id_expediteur) = @idDiscussion
+                AND id_status_msg = 1";
+
+            using var conn = new Connexion().ConnectPostgres();
+            await conn.OpenAsync();
+
+            using var cmd = new NpgsqlCommand(sql, conn);
+            cmd.Parameters.AddWithValue("@idUser", idUser);
+            cmd.Parameters.AddWithValue("@idDiscussion", idDiscussion);
+
+            await cmd.ExecuteNonQueryAsync();
+        }
+
+        public async Task<string> GetNomExpediteur(NpgsqlConnection liasonBase, int idExpediteur, int idDestinataire)
+        {
+            string nomExpediteur = null;
+
+            string sql = @"
+                SELECT nom_expediteur 
+                FROM v_discussions_individuelles
+                WHERE id_expediteur = @idExp AND id_destinataire = @idDest
+                LIMIT 1;
+            ";
+
+            if (liasonBase == null || liasonBase.State == ConnectionState.Closed)
+            {
+                Connexion connexion = new Connexion();
+                liasonBase = connexion.ConnectPostgres();
+                liasonBase.Open();
+            }
+
+            try
+            {
+                using (var cmd = new NpgsqlCommand(sql, liasonBase))
+                {
+                    cmd.Parameters.AddWithValue("@idExp", idExpediteur);
+                    cmd.Parameters.AddWithValue("@idDest", idDestinataire);
+
+                    using (var reader = cmd.ExecuteReader())
+                    {
+                        if (reader.Read())
+                        {
+                            int indexNom = reader.GetOrdinal("nom_expediteur");
+                            nomExpediteur = reader.GetString(indexNom);
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Erreur GetNomExpediteur : " + ex.Message);
+            }
+            finally
+            {
+                if (liasonBase != null)
+                {
+                    liasonBase.Close();
+                }
+            }
+
+            return nomExpediteur;
+        }
+
+
+
+
+
     }
+
 }

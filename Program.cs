@@ -1,8 +1,11 @@
 using System.Text;
 using MessagerieInterneAPI;
 using MessagerieInterneAPI.Data;
+using MessagerieInterneAPI.Modules.Discussion;
+using MessagerieInterneAPI.Modules.Hubs;
 using MessagerieInterneAPI.Modules.Role;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 
@@ -25,7 +28,28 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
          IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey)),
          RoleClaimType = "Logistique"
      };
+
+     // 👇 très important pour permettre l'authentification WebSocket
+     options.Events = new JwtBearerEvents
+     {
+         OnMessageReceived = context =>
+         {
+             var accessToken = context.Request.Query["access_token"];
+
+             // Si la requête vient du Hub SignalR
+             var path = context.HttpContext.Request.Path;
+             if (!string.IsNullOrEmpty(accessToken) &&
+                 (path.StartsWithSegments("/chathub")))
+             {
+                 // Lire le token depuis la query
+                 context.Token = accessToken;
+             }
+
+             return Task.CompletedTask;
+         }
+     };
  });
+
 
 
 builder.Services.AddDbContext<AppDbContext>(options =>
@@ -73,19 +97,22 @@ builder.Services.AddCors(options =>
             policy.WithOrigins("http://localhost:3000")
                   .AllowAnyHeader()
                   .AllowAnyMethod()
-                  .AllowCredentials();
+                  .AllowCredentials()
+                  .SetIsOriginAllowed(_ => true);
         });
 });
 
 builder.Services.AddScoped<UtilisateurService>();
 builder.Services.AddScoped<GroupeDiscussionService>();
 builder.Services.AddScoped<RoleService>();
+builder.Services.AddScoped<MessageService>();
 builder.Services.AddSignalR();
 
+builder.Services.AddSingleton<IUserIdProvider, MyCustomUserIdProvider>();
 
 var app = builder.Build();
 //builder.Services.AddAuthorization();
-app.UseCors("AllowLocalhost3000"); 
+app.UseCors("AllowLocalhost3000");
 app.UseAuthorization();
 //app.UseAuthentication();
 app.MapControllers();
