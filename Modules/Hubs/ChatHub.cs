@@ -7,6 +7,7 @@ namespace MessagerieInterneAPI
     public class ChatHub : Hub
     {
         private readonly MessageService _messageService;
+        private Connexion connexion = new Connexion();
 
         public ChatHub(MessageService messageService)
         {
@@ -49,11 +50,13 @@ namespace MessagerieInterneAPI
             // ✅ Insert en DB (connexion gérée en pool)
             await _messageService.SendMessage(msg);
 
+            string nomExpediteur = await _messageService.GetNomExpediteur(connexion.ConnectPostgres(), idExp, idDest ?? 0);
+
             var payload = new
             {
                 id_discussion = idGroupe ?? idDest,
                 id_expediteur = idExp,
-                expediteur_nom = groupName,
+                expediteur_nom = nomExpediteur,
                 id_destinataire = idDest,
                 id_groupe_discussion = idGroupe,
                 contenu = message,
@@ -69,6 +72,10 @@ namespace MessagerieInterneAPI
             {
                 await Clients.User(idDest.ToString()).SendAsync("ReceiveMessage", payload);
                 await Clients.User(idExp.ToString()).SendAsync("ReceiveMessage", payload);
+
+                var unreadCounts = await _messageService.GetUnreadCounts(idDest.Value); // tu l'as déjà
+                await Clients.User(idDest.Value.ToString()).SendAsync("UpdateUnreadCounts", unreadCounts);
+                // await Clients.User(idExp.ToString()).SendAsync("UpdateUnreadCounts", unreadCounts);
             }
         }
 

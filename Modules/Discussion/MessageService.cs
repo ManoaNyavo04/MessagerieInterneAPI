@@ -468,9 +468,60 @@ namespace MessagerieInterneAPI.Modules.Discussion
             await cmd.ExecuteNonQueryAsync();
         }
 
+        public async Task<string> GetNomExpediteur(NpgsqlConnection liasonBase, int idExpediteur, int idDestinataire)
+        {
+            string nomExpediteur = null;
+
+            string sql = @"
+                SELECT nom_expediteur 
+                FROM v_discussions_individuelles
+                WHERE id_expediteur = @idExp AND id_destinataire = @idDest
+                LIMIT 1;
+            ";
+
+            if (liasonBase == null || liasonBase.State == ConnectionState.Closed)
+            {
+                Connexion connexion = new Connexion();
+                liasonBase = connexion.ConnectPostgres();
+                liasonBase.Open();
+            }
+
+            try
+            {
+                using (var cmd = new NpgsqlCommand(sql, liasonBase))
+                {
+                    cmd.Parameters.AddWithValue("@idExp", idExpediteur);
+                    cmd.Parameters.AddWithValue("@idDest", idDestinataire);
+
+                    using (var reader = cmd.ExecuteReader())
+                    {
+                        if (reader.Read())
+                        {
+                            int indexNom = reader.GetOrdinal("nom_expediteur");
+                            nomExpediteur = reader.GetString(indexNom);
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Erreur GetNomExpediteur : " + ex.Message);
+            }
+            finally
+            {
+                if (liasonBase != null)
+                {
+                    liasonBase.Close();
+                }
+            }
+
+            return nomExpediteur;
+        }
+
+
 
 
 
     }
-    
+
 }
