@@ -1,2 +1,22 @@
+# Fichiers binaires et objets .NET
+bin/
 obj/
-obj/
+
+# Fichiers utilisateur Visual Studio
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# Visual Studio Code
+.vscode/
+
+# Logs
+*.log
+
+# PDB, cache, DB, fichiers temporaires
+*.pdb
+*.cache
+*.dbmdl
+*.DS_Store
+*.swp
