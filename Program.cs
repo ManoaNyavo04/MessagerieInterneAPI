@@ -118,7 +118,7 @@ app.UseAuthorization();
 //app.UseAuthentication();
 app.MapControllers();
 app.UseRouting();
-app.UseCors("AllowReactApp");
+// app.UseCors("AllowReactApp");
 
 app.MapHub<ChatHub>("/chathub");
 
