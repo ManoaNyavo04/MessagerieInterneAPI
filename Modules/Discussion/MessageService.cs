@@ -486,6 +486,7 @@ namespace MessagerieInterneAPI.Modules.Discussion
                 liasonBase.Open();
             }
 
+
             try
             {
                 using (var cmd = new NpgsqlCommand(sql, liasonBase))

@@ -7,7 +7,7 @@ namespace MessagerieInterneAPI.Data
     {
         public NpgsqlConnection ConnectPostgres()
         {
-            string connectionString = "Host=localhost;Port=5432;Username=messagerie;Password=messagerie;Database=messagerie;";
+            string connectionString = "Host=localhost;Port=5432;Username=postgres;Password=pareramada;Database=messagerie;";
             try
             {
                 NpgsqlConnection connection = new NpgsqlConnection(connectionString);
