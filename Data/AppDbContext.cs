@@ -14,6 +14,7 @@ namespace MessagerieInterneAPI.Data
         public DbSet<UtilisateurGroupeDiscussionModel> UtilisateurGrpDiscu { get; set; }
         public DbSet<MessageModel> Message { get; set; }
         public DbSet<RoleModel> Role { get; set; }
+        public DbSet<GroupeDiscussionModel> GroupeDiscussion { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {

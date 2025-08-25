@@ -111,16 +111,9 @@ builder.Services.AddSignalR();
 
 builder.Services.AddSingleton<IUserIdProvider, MyCustomUserIdProvider>();
 
-var app = builder.Build();
-//builder.Services.AddAuthorization();
-app.UseCors("AllowLocalhost3000");
-app.UseAuthorization();
-//app.UseAuthentication();
-app.MapControllers();
-app.UseRouting();
-// app.UseCors("AllowReactApp");
+builder.Services.AddAuthorization();
 
-app.MapHub<ChatHub>("/chathub");
+var app = builder.Build();
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
@@ -129,6 +122,20 @@ if (app.Environment.IsDevelopment())
 
     app.UseSwaggerUI();
 }
+app.UseRouting();
+
+app.UseCors("AllowLocalhost3000");
+app.UseAuthentication();
+app.UseAuthorization();
+app.MapControllers();
+// app.UseCors("AllowReactApp");
+
+
+app.MapHub<ChatHub>("/chathub");
+
+
+
+
 
 // app.UseHttpsRedirection();
 
