@@ -26,6 +26,7 @@ namespace MessagerieInterneAPI.Entite
         public UtilisateurModel()
         {
 
+
         }
 
         public UtilisateurModel(int user, string nom, string prenom, string matricule,string mdp,  int role, string roleName)

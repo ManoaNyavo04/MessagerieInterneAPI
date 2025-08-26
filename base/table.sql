@@ -1,6 +1,8 @@
 CREATE DATABASE messagerie;
 
 \c messagerie;
+SET client_encoding = 'UTF8';
+
 
 CREATE TABLE pole(
     id_pole serial primary key,
@@ -63,6 +65,7 @@ CREATE TABLE utilisateur_groupe_discussion(
     foreign key (id_utilisateur) references utilisateur(id_utilisateur),
     foreign key (id_groupe_discussion) references groupe_discussion(id_groupe_discussion)
 );
+ALTER TABLE utilisateur_groupe_discussion ADD COLUMN statuts INT default 0; -- 0 : membre, 1 : retiré
 
 CREATE TABLE message (
     id_message serial primary key,

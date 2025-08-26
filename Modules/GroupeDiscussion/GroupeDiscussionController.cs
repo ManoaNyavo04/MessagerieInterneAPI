@@ -53,5 +53,37 @@ namespace MessagerieInterneAPI
             return Ok(new { message = "Groupe créé avec succès ", dto.Nom });
 
         }
+
+        [HttpGet("getMembresGroupeDiscussion")]
+        public async Task<IActionResult> GetMembresGroupeDiscussion(int idGroupeDiscussion)
+        {
+            if (idGroupeDiscussion <= 0)
+            {
+                return BadRequest("L'ID du groupe de discussion est invalide.");
+            }
+            var membres = await _service.GetMembresGroupe(connexion.ConnectPostgres(), idGroupeDiscussion);
+
+            return Ok(membres);
+        }
+
+        [HttpPost("ajouterNouveauMembre")]
+        public async Task<IActionResult> AjouterNouveauMembre(int idGroupe, [FromBody] GroupeDiscussionDTO dto) {
+            if (dto.Utilisateurs == null || !dto.Utilisateurs.Any())
+            {
+                return BadRequest("Aucun membre à ajouter.");
+            }
+
+            try
+            {
+                await _service.AjouterNouveauxMembres(connexion.ConnectPostgres(), idGroupe, dto.Utilisateurs);
+                return Ok(new { message = "Membres ajoutés avec succès." });
+
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex.Message);
+                return StatusCode(500, "Erreur lors de l'ajout des membres.");
+            }
+        }
     }
 }

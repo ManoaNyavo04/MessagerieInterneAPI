@@ -21,6 +21,7 @@ CREATE OR REPLACE VIEW v_utilisateur_groupe_discussion AS (
         u.nom, 
         u.prenom, 
         ugd.est_admin,
+        ugd.statuts,
         'groupe' AS type 
     from utilisateur_groupe_discussion ugd 
     join utilisateur u on u.id_utilisateur = ugd.id_utilisateur 

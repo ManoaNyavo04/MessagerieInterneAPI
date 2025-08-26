@@ -170,6 +170,92 @@ namespace MessagerieInterneAPI
 
         }
 
+        public async Task<List<UtilisateurGroupeDiscussionModel>> GetMembresGroupe(NpgsqlConnection liaisonbase, int idGroupe)
+        {
+            var membres = new List<UtilisateurGroupeDiscussionModel>();
+
+            if (liaisonbase == null || liaisonbase.State == ConnectionState.Closed)
+            {
+                liaisonbase = connexion.ConnectPostgres();
+                liaisonbase.Open();
+            }
+
+            try
+            {
+                string sql = @"
+                    select * from v_utilisateur_groupe_discussion
+                    WHERE id_groupe_discussion = @id_groupe_discussion
+                    and statuts = 0";
+
+                using (var cmd = new NpgsqlCommand(sql, liaisonbase))
+                {
+                    cmd.Parameters.AddWithValue("@id_groupe_discussion", idGroupe);
+                    using (var reader = cmd.ExecuteReader())
+                    {
+                        while (reader.Read())
+                        {
+                            var membre = new UtilisateurGroupeDiscussionModel
+                            {
+                                Id_groupe_discussion = reader.GetInt32(0),
+                                Groupe = reader.GetString(1),
+                                Description = reader.GetString(2),
+                                Id_utilisateur = reader.GetInt32(3),
+                                Matricule = reader.GetString(4),
+                                Nom = reader.GetString(5),
+                                Prenom = reader.GetString(6),
+                                Est_admin = reader.GetBoolean(7),
+                                Statuts = reader.GetInt32(8)
+                            };
+                            membres.Add(membre);
+                        }
+                    }
+                }
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e.Message);
+            }
+            finally
+            {
+                liaisonbase?.Close();
+            }
+
+            return membres;
+        }
+
+        public async Task AjouterNouveauxMembres(NpgsqlConnection liaisonbase, int idGroupe, List<int> nouveauxMembres)
+        {
+            if (liaisonbase == null || liaisonbase.State == ConnectionState.Closed)
+            {
+                liaisonbase = connexion.ConnectPostgres();
+                liaisonbase.Open();
+            }
+
+            try
+            {
+                foreach (var userId in nouveauxMembres.Distinct()) // Supprimer doublons
+                {
+                    string sqlMembre = @"
+                        INSERT INTO utilisateur_groupe_discussion 
+                        (id_groupe_discussion, id_utilisateur, est_admin)
+                        VALUES (@id_groupe_discussion, @id_utilisateur, @est_admin)";
+                    using var cmd = new NpgsqlCommand(sqlMembre, liaisonbase);
+                    cmd.Parameters.AddWithValue("@id_groupe_discussion", idGroupe);
+                    cmd.Parameters.AddWithValue("@id_utilisateur", userId);
+                    cmd.Parameters.AddWithValue("@est_admin", false); 
+                    await cmd.ExecuteNonQueryAsync();
+                }
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e.Message);
+            }
+            finally
+            {
+                liaisonbase?.Close();
+            }
+        }
+
 
     }
 }
