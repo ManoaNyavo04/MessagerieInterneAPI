@@ -48,12 +48,13 @@ namespace MessagerieInterneAPI
 
             // var liason = new Connexion().ConnectPostgres();
             // ✅ Insert en DB (connexion gérée en pool)
-            await _messageService.SendMessage(msg);
+            var insertedMessage = await _messageService.SendMessage(msg);
 
             string nomExpediteur = await _messageService.GetNomExpediteur(connexion.ConnectPostgres(), idExp, idDest ?? 0);
 
             var payload = new
             {
+                id_message = insertedMessage.Id_message,
                 id_discussion = idGroupe ?? idDest,
                 id_expediteur = idExp,
                 expediteur_nom = nomExpediteur,

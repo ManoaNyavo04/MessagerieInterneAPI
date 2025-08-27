@@ -44,18 +44,6 @@ namespace MessagerieInterneAPI.Modules.Discussion
             return Ok(messages);
         }
 
-        /*[HttpPost("sendMessage")]
-        public async Task<IActionResult> SendMessage(MessageModel message)
-        {
-            _service.SendMessage(connexion.ConnectPostgres(), message);
-            return Ok("Message sent successfully.");
-        }
-        /*
-        var discussions = await GetGroupes(idUtilisateur, conn);
-discussions.AddRange(await GetPrives(idUtilisateur, conn));
-return Ok(discussions);
-
-        */
         [HttpGet("getMesDiscussions")]
         public async Task<IActionResult> GetMesDiscussions()
         {
@@ -88,10 +76,13 @@ return Ok(discussions);
             int idUtilisateur = int.Parse(idUtilisateurClaim.Value);
             Console.WriteLine("id ve hitany (message zone): " + idUtilisateur);
 
+            Console.WriteLine($"🔎 API /messages → targetId: {targetId}, type: {type}");
 
-            List<MessageModel> messages = type == "groupe"
+            var messages = await _service.GetMessages(idUtilisateur, targetId, type);
+
+            /*List<MessageModel> messages = type == "groupe"
                 ? _service.GetMessagesByGroupId(connexion.ConnectPostgres(), targetId)
-                : _service.GetIndividualMessage(connexion.ConnectPostgres(), idUtilisateur, targetId);
+                : _service.GetIndividualMessage(connexion.ConnectPostgres(), idUtilisateur, targetId);*/
             Console.WriteLine("tafiditra??");
 
             return Ok(messages);
@@ -132,15 +123,16 @@ return Ok(discussions);
         }
 
         [HttpPut("lireMessage")]
-        public async Task<IActionResult> MarkMessagesAsRead(int discussionId)
+        public async Task<IActionResult> MarkMessagesAsRead(int discussionId, string type)
         {
             var idUtilisateurClaim = User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier);
             if (idUtilisateurClaim == null) return Unauthorized();
 
+
             int idUtilisateur = int.Parse(idUtilisateurClaim.Value);
             Console.WriteLine("id ve hitany (message zone): " + idUtilisateur);
 
-            await _service.MarkMessagesAsRead(idUtilisateur, discussionId);
+            await _service.MarkMessagesAsRead(idUtilisateur, discussionId, type);
             // await _hubContext.Clients.Group($"discussion_{discussionId}")
             //     .SendAsync("MessagesRead", new { discussionId, userId = idUtilisateur });
 

@@ -20,9 +20,61 @@ namespace MessagerieInterneAPI.Modules.Discussion
         {
         }
 
+        public async Task<IEnumerable<MessageModel>> GetMessages(int exp, int dest, string type)
+        {
+            string sql;
+            // int exp, int dest
+
+            if (type == "groupe")
+            {
+                sql = @"SELECT * FROM message 
+                WHERE id_groupe_discussion = @id 
+                ORDER BY id_message ASC"; // 🔹 Afficher tous les messages du groupe
+            }
+            else if (type == "prive")
+            {
+                sql = @"SELECT * FROM message 
+                WHERE (id_expediteur = @userId AND id_destinataire = @id)
+                   OR (id_expediteur = @id AND id_destinataire = @userId)
+                ORDER BY id_message ASC"; // 🔹 Messages privés entre 2 personnes
+            }
+            else
+            {
+                throw new ArgumentException("Type de discussion inconnu");
+            }
+
+            using var conn = new Connexion().ConnectPostgres();
+            conn.Open();
+
+            using var cmd = new NpgsqlCommand(sql, conn);
+            cmd.Parameters.AddWithValue("@id", dest);
+            if (type == "prive")
+                cmd.Parameters.AddWithValue("@userId", exp); // à ajuster selon ton contexte
+
+            var messages = new List<MessageModel>();
+            using var reader = await cmd.ExecuteReaderAsync();
+            while (await reader.ReadAsync())
+            {
+                messages.Add(new MessageModel
+                {
+                    Id_message = reader.GetInt32(0),
+                    Id_expediteur = reader.GetInt32(1),
+                    Id_destinataire = reader.IsDBNull(2) ? null : reader.GetInt32(2),
+                    Id_groupe_discussion = reader.IsDBNull(3) ? null : reader.GetInt32(3),
+                    Contenu = reader.GetString(4),
+                    Date_envoie = reader.GetDateTime(5),
+                    Id_status_msg = reader.GetInt32(6)
+                });
+            }
+
+            return messages;
+        }
+
+
         public List<MessageModel> GetMessagesByGroupId(NpgsqlConnection liasonBase, int groupId)
         {
             List<MessageModel> messages = new List<MessageModel>();
+            Console.WriteLine($"📥 Lecture des messages pour le groupe {groupId}");
             String sql = "SELECT * FROM message WHERE id_groupe_discussion = @id_groupe_discussion ORDER BY date_envoie";
 
             if (liasonBase == null || liasonBase.State == ConnectionState.Closed)
@@ -50,6 +102,7 @@ namespace MessagerieInterneAPI.Modules.Discussion
                         Date_envoie = reader.GetDateTime(5),
                         Id_status_msg = reader.GetInt32(6)
                     };
+                    Console.WriteLine($"[DEBUG] Message lu: {message.Id_message} - {message.Contenu}");
                     messages.Add(message);
                 }
             }
@@ -88,6 +141,7 @@ namespace MessagerieInterneAPI.Modules.Discussion
             if (liasonBase == null || liasonBase.State == ConnectionState.Closed)
             {
                 Connexion connexion = new Connexion();
+
                 liasonBase = connexion.ConnectPostgres();
                 liasonBase.Open();
             }
@@ -107,7 +161,7 @@ namespace MessagerieInterneAPI.Modules.Discussion
                             {
                                 Id_message = reader.GetInt32(0),
                                 Id_expediteur = reader.GetInt32(1),
-                                Id_destinataire = reader.GetInt32(2),
+                                Id_destinataire = reader.IsDBNull(2) ? 0 : reader.GetInt32(2),
                                 Id_groupe_discussion = reader.IsDBNull(3) ? 0 : reader.GetInt32(3),
                                 Contenu = reader.GetString(4),
                                 Date_envoie = reader.GetDateTime(5),
@@ -137,7 +191,38 @@ namespace MessagerieInterneAPI.Modules.Discussion
             return messages;
         }
 
-        public async Task SendMessage(MessageModel message)
+        public async Task<MessageModel> SendMessage(MessageModel message)
+        {
+            const string sql = @"
+            INSERT INTO message (
+                id_expediteur, id_destinataire, id_groupe_discussion, contenu, date_envoie, id_status_msg
+            )
+            VALUES (
+                @id_expediteur, @id_destinataire, @id_groupe_discussion, @contenu, @date_envoie, @id_status_msg
+            )
+            RETURNING id_message";  // 🔴 Ajout RETURNING
+
+            using var liasonBase = new Connexion().ConnectPostgres();
+            liasonBase.Open();
+
+            using var cmd = new NpgsqlCommand(sql, liasonBase);
+            cmd.Parameters.AddWithValue("@id_expediteur", message.Id_expediteur);
+            cmd.Parameters.AddWithValue("@id_destinataire", (object?)message.Id_destinataire ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("@id_groupe_discussion", (object?)message.Id_groupe_discussion ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("@contenu", message.Contenu);
+            cmd.Parameters.AddWithValue("@date_envoie", message.Date_envoie);
+            cmd.Parameters.AddWithValue("@id_status_msg", message.Id_status_msg);
+
+            // 🔽 Lire l'ID inséré
+            var id = await cmd.ExecuteScalarAsync();
+            message.Id_message = Convert.ToInt32(id); // Assure-toi que le champ existe dans MessageModel
+
+            return message;
+        }
+
+
+
+        /*public async Task SendMessage(MessageModel message)
         {
             const string sql = "INSERT INTO message (id_expediteur, id_destinataire, id_groupe_discussion, contenu, date_envoie, id_status_msg) VALUES (@id_expediteur, @id_destinataire, @id_groupe_discussion, @contenu, @date_envoie, @id_status_msg)";
 
@@ -153,7 +238,7 @@ namespace MessagerieInterneAPI.Modules.Discussion
             cmd.Parameters.AddWithValue("@id_status_msg", message.Id_status_msg);
 
             await cmd.ExecuteNonQueryAsync();
-        }
+        }*/
 
 
 
@@ -423,14 +508,31 @@ namespace MessagerieInterneAPI.Modules.Discussion
 
         public async Task<Dictionary<int, int>> GetUnreadCounts(int idUser)
         {
-            const string sql = @"
+            /*const string sql = @"
                 SELECT 
                     COALESCE(id_groupe_discussion, id_expediteur) AS id_discussion,
                     COUNT(*) AS unread_count
                 FROM message
                 WHERE id_destinataire = @idUser
                 AND id_status_msg = 1
-                GROUP BY COALESCE(id_groupe_discussion, id_expediteur)";
+                GROUP BY COALESCE(id_groupe_discussion, id_expediteur)";*/
+
+            const string sql = @"
+                SELECT id_expediteur AS id_discussion, COUNT(*) AS unread_count
+                FROM message
+                WHERE id_destinataire = @idUser
+                AND id_status_msg = 1
+                GROUP BY id_expediteur
+
+                UNION ALL
+
+                SELECT m.id_groupe_discussion AS id_discussion, COUNT(*) AS unread_count
+                FROM message msg
+                JOIN utilisateur_groupe_discussion m ON m.id_groupe_discussion = msg.id_groupe_discussion
+                WHERE m.id_utilisateur = @idUser
+                AND msg.id_status_msg = 1
+                GROUP BY m.id_groupe_discussion;
+            ";
 
             using var conn = new Connexion().ConnectPostgres();
             await conn.OpenAsync();
@@ -449,7 +551,45 @@ namespace MessagerieInterneAPI.Modules.Discussion
             return result;
         }
 
-        public async Task MarkMessagesAsRead(int idUser, int idDiscussion)
+        public async Task MarkMessagesAsRead(int idUser, int idDiscussion, string type)
+        {
+            string sql;
+
+            if (type == "prive")
+            {
+                sql = @"
+                    UPDATE message
+                SET id_status_msg = 3
+                WHERE id_status_msg = 1
+                AND id_expediteur = @idDiscussion
+                AND id_destinataire = @idUser";
+            }
+            else if (type == "groupe")
+            {
+                sql = @"
+                    UPDATE message
+                    SET id_status_msg = 3
+                    WHERE id_groupe_discussion = @idDiscussion
+                    AND id_status_msg = 1
+                    AND id_expediteur != @idUser"; // facultatif si l'expéditeur ne compte pas ses propres messages
+            }
+            else
+            {
+                throw new ArgumentException("Type de discussion inconnu");
+            }
+
+            using var conn = new Connexion().ConnectPostgres();
+            await conn.OpenAsync();
+
+            using var cmd = new NpgsqlCommand(sql, conn);
+            cmd.Parameters.AddWithValue("@idUser", idUser);
+            cmd.Parameters.AddWithValue("@idDiscussion", idDiscussion);
+
+            await cmd.ExecuteNonQueryAsync();
+        }
+
+
+        /*public async Task MarkMessagesAsRead(int idUser, int idDiscussion)
         {
             const string sql = @"
                 UPDATE message
@@ -466,7 +606,7 @@ namespace MessagerieInterneAPI.Modules.Discussion
             cmd.Parameters.AddWithValue("@idDiscussion", idDiscussion);
 
             await cmd.ExecuteNonQueryAsync();
-        }
+        }*/
 
         public async Task<string> GetNomExpediteur(NpgsqlConnection liasonBase, int idExpediteur, int idDestinataire)
         {

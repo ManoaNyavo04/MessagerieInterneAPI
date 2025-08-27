@@ -60,8 +60,8 @@ JOIN groupe_membres gm ON gm.id_groupe_discussion = gd.id_groupe_discussion;
 
 SELECT *
 FROM message
-WHERE id_groupe_discussion IS NULL
-AND (
+-- WHERE id_groupe_discussion IS NULL
+WHERE (
     (id_expediteur = 5 AND id_destinataire = 6) OR
     (id_expediteur = 6 AND id_destinataire = 5)
 )
@@ -146,6 +146,63 @@ FROM message
 WHERE id_destinataire = 7
 AND id_status_msg = 1
 GROUP BY COALESCE(id_groupe_discussion, id_expediteur);
+
+
+
+
+-- Messages privés non lus
+SELECT 
+    id_expediteur AS id_discussion,
+    COUNT(*) AS unread_count
+FROM message
+WHERE id_destinataire = 1
+  AND id_status_msg = 1
+GROUP BY id_expediteur
+
+UNION ALL
+
+-- Messages de groupe non lus
+SELECT 
+    m.id_groupe_discussion AS id_discussion,
+    COUNT(*) AS unread_count
+FROM message msg
+JOIN utilisateur_groupe_discussion m ON m.id_groupe_discussion = msg.id_groupe_discussion
+WHERE m.id_utilisateur = 1
+  AND msg.id_status_msg = 1
+GROUP BY m.id_groupe_discussion;
+
+
+
+
+
+
+
+
+
+
+
+SELECT 
+    id_expediteur AS id,
+    'prive' AS type,
+    COUNT(*) AS unread_count
+FROM message
+WHERE id_destinataire = 1
+AND id_status_msg = 1
+GROUP BY id_expediteur
+
+UNION ALL
+
+SELECT 
+    m.id_groupe_discussion AS id,
+    'groupe' AS type,
+    COUNT(*) AS unread_count
+FROM message msg
+JOIN utilisateur_groupe_discussion m ON m.id_groupe_discussion = msg.id_groupe_discussion
+WHERE m.id_utilisateur = 1
+AND msg.id_status_msg = 1
+GROUP BY m.id_groupe_discussion;
+
+
 
 
 
