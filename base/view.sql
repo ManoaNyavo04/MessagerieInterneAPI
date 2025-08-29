@@ -49,8 +49,25 @@ CREATE VIEW v_discussions_individuelles AS
         d.id_utilisateur AS id_destinataire,
         d.nom || ' ' || d.prenom AS nom_destinataire,
         m.contenu,
+
         'prive' AS type
     FROM message m
     JOIN utilisateur e ON e.id_utilisateur = m.id_expediteur
     JOIN utilisateur d ON d.id_utilisateur = m.id_destinataire
     WHERE m.id_groupe_discussion IS NULL;
+
+
+CREATE or REPLACE VIEW v_utilisateur_message AS (
+    select 
+        m.id_message,
+        m.id_expediteur,
+        u.nom || ' ' || u.prenom AS nom_expediteur,
+        m.id_destinataire,
+        m.id_groupe_discussion,
+        m.contenu,
+        m.date_envoie,
+        m.id_status_msg
+    from message m 
+    join utilisateur u on u.id_utilisateur = m.id_expediteur 
+    order by id_message desc
+);

@@ -186,7 +186,7 @@ SELECT
     'prive' AS type,
     COUNT(*) AS unread_count
 FROM message
-WHERE id_destinataire = 1
+WHERE id_destinataire = 8
 AND id_status_msg = 1
 GROUP BY id_expediteur
 
@@ -202,6 +202,32 @@ WHERE m.id_utilisateur = 1
 AND msg.id_status_msg = 1
 GROUP BY m.id_groupe_discussion;
 
+
+
+
+select 
+    m.id_message,
+    m.id_expediteur,
+    u.nom || ' ' || u.prenom AS nom_expediteur,
+    m.id_destinataire,
+    m.id_groupe_discussion,
+    m.contenu,
+    m.date_envoie,
+    m.id_status_msg
+from message m 
+join utilisateur u on u.id_utilisateur = m.id_expediteur 
+order by id_message desc;
+
+
+
+INSERT INTO message_utilisateur_statut (id_message, id_utilisateur, id_status_msg)
+SELECT m.id_message, 1, 3 -- 3 = lu
+FROM message m
+LEFT JOIN message_utilisateur_statut s
+  ON s.id_message = m.id_message AND s.id_utilisateur = 1 AND s.id_status_msg = 3
+WHERE m.id_expediteur = 203
+          AND m.id_destinataire = 1
+          AND s.id_utilisateur IS NULL;
 
 
 

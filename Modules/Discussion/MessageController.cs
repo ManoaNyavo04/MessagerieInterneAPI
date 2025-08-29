@@ -16,10 +16,11 @@ namespace MessagerieInterneAPI.Modules.Discussion
         private readonly IHubContext<ChatHub> _hubContext;
 
 
-        public MessageController(AppDbContext context)
+        public MessageController(AppDbContext context, IHubContext<ChatHub> hubContext)
         {
             _context = context;
             _service = new MessageService();
+            _hubContext = hubContext;
         }
 
         [HttpGet("getMessagesByGroup/{discussionId}")]
@@ -133,6 +134,11 @@ namespace MessagerieInterneAPI.Modules.Discussion
             Console.WriteLine("id ve hitany (message zone): " + idUtilisateur);
 
             await _service.MarkMessagesAsRead(idUtilisateur, discussionId, type);
+
+            // 🔁 Mise à jour en temps réel
+            var updatedCounts = await _service.GetUnreadCounts(idUtilisateur);
+            await _hubContext.Clients.User(idUtilisateur.ToString())
+                .SendAsync("UpdateUnreadCounts", updatedCounts);
             // await _hubContext.Clients.Group($"discussion_{discussionId}")
             //     .SendAsync("MessagesRead", new { discussionId, userId = idUtilisateur });
 

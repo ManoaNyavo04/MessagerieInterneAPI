@@ -27,13 +27,13 @@ namespace MessagerieInterneAPI.Modules.Discussion
 
             if (type == "groupe")
             {
-                sql = @"SELECT * FROM message 
+                sql = @"SELECT * FROM v_utilisateur_message 
                 WHERE id_groupe_discussion = @id 
                 ORDER BY id_message ASC"; // 🔹 Afficher tous les messages du groupe
             }
             else if (type == "prive")
             {
-                sql = @"SELECT * FROM message 
+                sql = @"SELECT * FROM v_utilisateur_message 
                 WHERE (id_expediteur = @userId AND id_destinataire = @id)
                    OR (id_expediteur = @id AND id_destinataire = @userId)
                 ORDER BY id_message ASC"; // 🔹 Messages privés entre 2 personnes
@@ -59,11 +59,12 @@ namespace MessagerieInterneAPI.Modules.Discussion
                 {
                     Id_message = reader.GetInt32(0),
                     Id_expediteur = reader.GetInt32(1),
-                    Id_destinataire = reader.IsDBNull(2) ? null : reader.GetInt32(2),
-                    Id_groupe_discussion = reader.IsDBNull(3) ? null : reader.GetInt32(3),
-                    Contenu = reader.GetString(4),
-                    Date_envoie = reader.GetDateTime(5),
-                    Id_status_msg = reader.GetInt32(6)
+                    Nom_expediteur = reader.GetString(2),
+                    Id_destinataire = reader.IsDBNull(3) ? null : reader.GetInt32(3),
+                    Id_groupe_discussion = reader.IsDBNull(4) ? null : reader.GetInt32(4),
+                    Contenu = reader.GetString(5),
+                    Date_envoie = reader.GetDateTime(6),
+                    Id_status_msg = reader.GetInt32(7)
                 });
             }
 
@@ -506,16 +507,64 @@ namespace MessagerieInterneAPI.Modules.Discussion
             }
         }
 
-        public async Task<Dictionary<int, int>> GetUnreadCounts(int idUser)
+        public async Task<List<ComptageMsgNonLuDTO>> GetUnreadCounts(int idUser)
         {
-            /*const string sql = @"
+            const string sql = @"
+                SELECT 
+                    id_expediteur AS id,
+                    'prive' AS type,
+                    COUNT(*) AS unread_count
+                FROM message
+                WHERE id_destinataire = @idUser
+                AND id_status_msg = 1
+                GROUP BY id_expediteur
+
+                UNION ALL
+
+                SELECT 
+                    m.id_groupe_discussion AS id,
+                    'groupe' AS type,
+                    COUNT(*) AS unread_count
+                FROM message msg
+                JOIN utilisateur_groupe_discussion m ON m.id_groupe_discussion = msg.id_groupe_discussion
+                WHERE m.id_utilisateur = @idUser
+                AND msg.id_status_msg = 1
+                GROUP BY m.id_groupe_discussion;
+            ";
+
+            using var conn = new Connexion().ConnectPostgres();
+            await conn.OpenAsync();
+
+            using var cmd = new NpgsqlCommand(sql, conn);
+            cmd.Parameters.AddWithValue("@idUser", idUser);
+
+            var result = new List<ComptageMsgNonLuDTO>();
+            using var reader = await cmd.ExecuteReaderAsync();
+
+            while (await reader.ReadAsync())
+            {
+                result.Add(new ComptageMsgNonLuDTO
+                {
+                    Id = reader.GetInt32(0),
+                    Type = reader.GetString(1),
+                    Count = reader.GetInt32(2)
+                });
+            }
+
+            return result;
+        }
+
+
+        /*public async Task<Dictionary<int, int>> GetUnreadCounts(int idUser)
+        {
+            const string sql = @"
                 SELECT 
                     COALESCE(id_groupe_discussion, id_expediteur) AS id_discussion,
                     COUNT(*) AS unread_count
                 FROM message
                 WHERE id_destinataire = @idUser
                 AND id_status_msg = 1
-                GROUP BY COALESCE(id_groupe_discussion, id_expediteur)";*/
+                GROUP BY COALESCE(id_groupe_discussion, id_expediteur)";
 
             const string sql = @"
                 SELECT id_expediteur AS id_discussion, COUNT(*) AS unread_count
@@ -549,7 +598,7 @@ namespace MessagerieInterneAPI.Modules.Discussion
             }
 
             return result;
-        }
+        }*/
 
         public async Task MarkMessagesAsRead(int idUser, int idDiscussion, string type)
         {

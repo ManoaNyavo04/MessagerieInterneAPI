@@ -3,7 +3,7 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace MessagerieInterneAPI
 {
-    [Table("message")]
+    [Table("v_utilisateur_message")]
     public class MessageModel
     {
         [Key]
@@ -12,6 +12,8 @@ namespace MessagerieInterneAPI
         
         [Column("id_expediteur")]
         public int Id_expediteur { get; set; }
+        [Column("nom_expediteur")]
+        public string Nom_expediteur { get; set; }
         [Column("id_destinataire")]
         public int? Id_destinataire { get; set; }
         [Column("id_groupe_discussion")]
@@ -25,10 +27,11 @@ namespace MessagerieInterneAPI
 
         public MessageModel() { }
 
-        public MessageModel(int id_message, int id_expediteur, int id_destinataire, int id_groupe_discussion, string contenu, DateTime date_envoi, int id_status_msg)
+        public MessageModel(int id_message, int id_expediteur, String nomExpediteur, int id_destinataire, int id_groupe_discussion, string contenu, DateTime date_envoi, int id_status_msg)
         {
             Id_message = id_message;
             Id_expediteur = id_expediteur;
+            Nom_expediteur = nomExpediteur;
             Id_destinataire = id_destinataire;
             Id_groupe_discussion = id_groupe_discussion;
             Contenu = contenu;

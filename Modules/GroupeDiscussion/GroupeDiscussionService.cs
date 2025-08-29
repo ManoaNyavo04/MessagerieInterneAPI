@@ -242,7 +242,7 @@ namespace MessagerieInterneAPI
                     using var cmd = new NpgsqlCommand(sqlMembre, liaisonbase);
                     cmd.Parameters.AddWithValue("@id_groupe_discussion", idGroupe);
                     cmd.Parameters.AddWithValue("@id_utilisateur", userId);
-                    cmd.Parameters.AddWithValue("@est_admin", false); 
+                    cmd.Parameters.AddWithValue("@est_admin", false);
                     await cmd.ExecuteNonQueryAsync();
                 }
             }
@@ -256,6 +256,52 @@ namespace MessagerieInterneAPI
             }
         }
 
+        public List<UtilisateurGroupeDiscussionModel> GetMembreGrpDiscu(NpgsqlConnection liaisonbase, int idGroupe)
+        {
+            String sql = "SELECT * FROM v_utilisateur_groupe_discussion WHERE id_groupe_discussion = @idGroupe";
+            if (liaisonbase == null || liaisonbase.State == ConnectionState.Closed)
+            {
+                liaisonbase = connexion.ConnectPostgres();
+                liaisonbase.Open();
+            }
+
+            List<UtilisateurGroupeDiscussionModel> listGrp = new List<UtilisateurGroupeDiscussionModel>();
+            try
+            {
+                NpgsqlCommand cmd = new NpgsqlCommand(sql, liaisonbase);
+                cmd.Parameters.AddWithValue("@idGroupe", idGroupe);
+
+
+                NpgsqlDataReader reader = cmd.ExecuteReader();
+                while (reader.Read())
+                {
+                    UtilisateurGroupeDiscussionModel user = new UtilisateurGroupeDiscussionModel();
+                    user.Id_utilisateur = (reader.GetInt32(0));
+                    user.Id_groupe_discussion = (reader.GetInt32(1));
+                    user.Nom = (reader.GetString(2));
+
+                    user.Prenom = (reader.GetString(3));
+                    user.Matricule = (reader.GetString(4));
+                    user.Groupe = (reader.GetString(5));
+
+                    listGrp.Add(user);
+                }
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e.Message);
+            }
+            finally
+            {
+                if (liaisonbase != null)
+                {
+                    liaisonbase.Close();
+                }
+            }
+            return listGrp;
+        }
+
 
     }
+    
 }

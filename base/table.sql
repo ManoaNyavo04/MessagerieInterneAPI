@@ -23,7 +23,7 @@ CREATE TABLE utilisateur(
     id_utilisateur serial primary key,
     nom VARCHAR(100),
     prenom VARCHAR(100),
-    matricule VARCHAR(100),
+    matricule VARCHAR(100),                       
     id_role INT,
     foreign key (id_role) references role(id_role)
 );
@@ -95,4 +95,15 @@ CREATE TABLE piece_joint (
     date_ajout timestamp,
     foreign key (id_message) references message(id_message),
     foreign key (id_type_piece_joint) references type_piece_joint(id_type_piece_joint)
+);
+
+CREATE TABLE message_utilisateur_statut (
+    id_message_utilisateur_statut serial primary key,
+    id_message INT,
+    id_utilisateur INT,
+    id_status_msg INT,
+    date_statut timestamp default NOW(),
+    foreign key (id_message) references message(id_message),
+    foreign key (id_utilisateur) references utilisateur(id_utilisateur),
+    foreign key (id_status_msg) references statuts_message(id_status_msg)
 );

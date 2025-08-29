@@ -7,11 +7,14 @@ namespace MessagerieInterneAPI
     public class ChatHub : Hub
     {
         private readonly MessageService _messageService;
+
+        private readonly GroupeDiscussionService _grpDiscuService;
         private Connexion connexion = new Connexion();
 
-        public ChatHub(MessageService messageService)
+        public ChatHub(MessageService messageService, GroupeDiscussionService grpDiscuService)
         {
             _messageService = messageService;
+            _grpDiscuService = grpDiscuService;
         }
         public async Task SendMessage(string user, string message)
         {
@@ -68,6 +71,16 @@ namespace MessagerieInterneAPI
             if (idGroupe != null)
             {
                 await Clients.Group(groupName).SendAsync("ReceiveMessage", payload);
+
+                var membres = await _grpDiscuService.GetMembresGroupe(connexion.ConnectPostgres(), idGroupe.Value);
+                foreach (var membre in membres)
+                {
+                    if (membre.Id_utilisateur != idExp) // Ne pas envoyer le comptage à l'expéditeur
+                    {
+                        var unreadCounts = await _messageService.GetUnreadCounts(membre.Id_utilisateur); // tu l'as déjà
+                        await Clients.User(membre.Id_utilisateur.ToString()).SendAsync("UpdateUnreadCounts", unreadCounts);
+                    }
+                }
             }
             else if (idDest != null)
             {
