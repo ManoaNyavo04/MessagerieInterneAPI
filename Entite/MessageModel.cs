@@ -25,9 +25,11 @@ namespace MessagerieInterneAPI
         [Column("id_status_msg")]
         public int Id_status_msg { get; set; }
 
+        public bool Est_lu { get; set; }
+
         public MessageModel() { }
 
-        public MessageModel(int id_message, int id_expediteur, String nomExpediteur, int id_destinataire, int id_groupe_discussion, string contenu, DateTime date_envoi, int id_status_msg)
+        public MessageModel(int id_message, int id_expediteur, String nomExpediteur, int id_destinataire, int id_groupe_discussion, string contenu, DateTime date_envoi, int id_status_msg, bool estLu)
         {
             Id_message = id_message;
             Id_expediteur = id_expediteur;
@@ -37,6 +39,7 @@ namespace MessagerieInterneAPI
             Contenu = contenu;
             Date_envoie = date_envoi;
             Id_status_msg = id_status_msg;
+            Est_lu = estLu;
         }
     }
 }

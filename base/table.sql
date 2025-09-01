@@ -107,3 +107,4 @@ CREATE TABLE message_utilisateur_statut (
     foreign key (id_utilisateur) references utilisateur(id_utilisateur),
     foreign key (id_status_msg) references statuts_message(id_status_msg)
 );
+

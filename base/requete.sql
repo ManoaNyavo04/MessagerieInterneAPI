@@ -233,3 +233,61 @@ WHERE m.id_expediteur = 203
 
 
 
+-- Messages privés non lus
+        SELECT 
+            m.id_expediteur AS id,
+            'prive' AS type,
+            COUNT(*) AS unread_count
+        FROM message m
+        LEFT JOIN message_utilisateur_statut mus 
+            ON mus.id_message = m.id_message AND mus.id_utilisateur = 7 AND mus.id_status_msg = 1 -- 3 = lu
+        WHERE m.id_destinataire = 7
+        AND mus.id_message_utilisateur_statut IS NULL
+        GROUP BY m.id_expediteur
+
+        UNION ALL
+
+        -- Messages de groupe non lus
+        SELECT 
+            m.id_groupe_discussion AS id,
+            'groupe' AS type,
+            COUNT(*) AS unread_count
+        FROM message m
+        JOIN utilisateur_groupe_discussion ugd ON ugd.id_groupe_discussion = m.id_groupe_discussion
+        LEFT JOIN message_utilisateur_statut mus 
+            ON mus.id_message = m.id_message AND mus.id_utilisateur = 7 AND mus.id_status_msg = 1
+        WHERE ugd.id_utilisateur = 7
+        AND m.id_expediteur != 7
+        AND mus.id_message_utilisateur_statut IS NULL
+        GROUP BY m.id_groupe_discussion;
+
+
+SELECT 
+  m.*, 
+  EXISTS (
+    SELECT 1 
+    FROM message_utilisateur_statut mus 
+    WHERE mus.id_message = m.id_message 
+      AND mus.id_utilisateur = 1
+      AND mus.id_status_msg = 3
+  ) AS est_lu
+FROM v_utilisateur_message m
+WHERE ...
+
+
+
+-- exemple pseudo SQL
+SELECT 
+    v.*,
+    ARRAY(
+        SELECT u.nom
+        FROM message_utilisateur_statut mus
+        JOIN utilisateur u ON u.id_utilisateur = mus.id_utilisateur
+        WHERE mus.id_message = v.id_message AND mus.id_status_msg = 3
+    ) AS liste_utilisateur_vu
+FROM v_utilisateur_message v
+WHERE v.id_groupe_discussion = 1
+ORDER BY v.id_message ASC;
+
+
+

@@ -23,20 +23,40 @@ namespace MessagerieInterneAPI.Modules.Discussion
         public async Task<IEnumerable<MessageModel>> GetMessages(int exp, int dest, string type)
         {
             string sql;
-            // int exp, int dest
 
             if (type == "groupe")
             {
-                sql = @"SELECT * FROM v_utilisateur_message 
-                WHERE id_groupe_discussion = @id 
-                ORDER BY id_message ASC"; // 🔹 Afficher tous les messages du groupe
+                sql = @"
+            SELECT 
+                v.*, 
+                EXISTS (
+                    SELECT 1 
+                    FROM message_utilisateur_statut mus 
+                    WHERE mus.id_message = v.id_message 
+                      AND mus.id_utilisateur != @userId
+                      AND mus.id_status_msg = 3
+                ) AS est_lu
+            FROM v_utilisateur_message v
+            WHERE v.id_groupe_discussion = @id
+            ORDER BY v.id_message ASC";
             }
             else if (type == "prive")
             {
-                sql = @"SELECT * FROM v_utilisateur_message 
-                WHERE (id_expediteur = @userId AND id_destinataire = @id)
-                   OR (id_expediteur = @id AND id_destinataire = @userId)
-                ORDER BY id_message ASC"; // 🔹 Messages privés entre 2 personnes
+                sql = @"
+            SELECT 
+                v.*,
+                EXISTS (
+                    SELECT 1 
+                    FROM message_utilisateur_statut mus 
+                    WHERE mus.id_message = v.id_message 
+                      AND mus.id_utilisateur = @dest 
+                      AND mus.id_status_msg = 3
+                ) AS est_lu
+            FROM v_utilisateur_message v
+            WHERE 
+                (v.id_expediteur = @userId AND v.id_destinataire = @id)
+             OR (v.id_expediteur = @id AND v.id_destinataire = @userId)
+            ORDER BY v.id_message ASC";
             }
             else
             {
@@ -44,12 +64,13 @@ namespace MessagerieInterneAPI.Modules.Discussion
             }
 
             using var conn = new Connexion().ConnectPostgres();
-            conn.Open();
+            await conn.OpenAsync();
 
             using var cmd = new NpgsqlCommand(sql, conn);
             cmd.Parameters.AddWithValue("@id", dest);
+            cmd.Parameters.AddWithValue("@userId", exp);
             if (type == "prive")
-                cmd.Parameters.AddWithValue("@userId", exp); // à ajuster selon ton contexte
+                cmd.Parameters.AddWithValue("@dest", dest);  // pour la sous-requête EXISTS
 
             var messages = new List<MessageModel>();
             using var reader = await cmd.ExecuteReaderAsync();
@@ -64,12 +85,14 @@ namespace MessagerieInterneAPI.Modules.Discussion
                     Id_groupe_discussion = reader.IsDBNull(4) ? null : reader.GetInt32(4),
                     Contenu = reader.GetString(5),
                     Date_envoie = reader.GetDateTime(6),
-                    Id_status_msg = reader.GetInt32(7)
+                    Id_status_msg = reader.GetInt32(7),
+                    Est_lu = reader.GetBoolean(8) // 👈 nouveau champ
                 });
             }
 
             return messages;
         }
+
 
 
         public List<MessageModel> GetMessagesByGroupId(NpgsqlConnection liasonBase, int groupId)
@@ -509,7 +532,7 @@ namespace MessagerieInterneAPI.Modules.Discussion
 
         public async Task<List<ComptageMsgNonLuDTO>> GetUnreadCounts(int idUser)
         {
-            const string sql = @"
+            /*const string sql = @"
                 SELECT 
                     id_expediteur AS id,
                     'prive' AS type,
@@ -530,6 +553,38 @@ namespace MessagerieInterneAPI.Modules.Discussion
                 WHERE m.id_utilisateur = @idUser
                 AND msg.id_status_msg = 1
                 GROUP BY m.id_groupe_discussion;
+            ";*/
+
+            const string sql = @"
+                -- Messages privés non lus
+                SELECT 
+                    m.id_expediteur AS id,
+                    'prive' AS type,
+                    COUNT(*) AS unread_count
+                FROM message m
+                LEFT JOIN message_utilisateur_statut mus 
+                    ON mus.id_message = m.id_message AND mus.id_utilisateur = @idUser
+                WHERE m.id_destinataire = @idUser 
+                AND mus.id_message_utilisateur_statut IS NULL
+                GROUP BY m.id_expediteur
+
+                UNION ALL
+
+                -- Messages de groupe non lus
+                SELECT 
+                    m.id_groupe_discussion AS id,
+                    'groupe' AS type,
+                    COUNT(*) AS unread_count
+                FROM message m
+                JOIN utilisateur_groupe_discussion ugd 
+                    ON ugd.id_groupe_discussion = m.id_groupe_discussion
+                LEFT JOIN message_utilisateur_statut mus 
+                    ON mus.id_message = m.id_message AND mus.id_utilisateur = @idUser
+                WHERE ugd.id_utilisateur = @idUser 
+                AND m.id_expediteur != @idUser
+                AND mus.id_message_utilisateur_statut IS NULL
+                GROUP BY m.id_groupe_discussion;
+
             ";
 
             using var conn = new Connexion().ConnectPostgres();
@@ -537,6 +592,7 @@ namespace MessagerieInterneAPI.Modules.Discussion
 
             using var cmd = new NpgsqlCommand(sql, conn);
             cmd.Parameters.AddWithValue("@idUser", idUser);
+
 
             var result = new List<ComptageMsgNonLuDTO>();
             using var reader = await cmd.ExecuteReaderAsync();
@@ -602,30 +658,33 @@ namespace MessagerieInterneAPI.Modules.Discussion
 
         public async Task MarkMessagesAsRead(int idUser, int idDiscussion, string type)
         {
-            string sql;
-
-            if (type == "prive")
-            {
-                sql = @"
-                    UPDATE message
-                SET id_status_msg = 3
-                WHERE id_status_msg = 1
-                AND id_expediteur = @idDiscussion
-                AND id_destinataire = @idUser";
-            }
-            else if (type == "groupe")
-            {
-                sql = @"
-                    UPDATE message
-                    SET id_status_msg = 3
-                    WHERE id_groupe_discussion = @idDiscussion
-                    AND id_status_msg = 1
-                    AND id_expediteur != @idUser"; // facultatif si l'expéditeur ne compte pas ses propres messages
-            }
-            else
-            {
-                throw new ArgumentException("Type de discussion inconnu");
-            }
+            string sql = type == "prive" ? @"
+                INSERT INTO message_utilisateur_statut (id_message, id_utilisateur, id_status_msg)
+                SELECT id_message, @idUser, 3
+                FROM message
+                WHERE id_expediteur = @idDiscussion
+                AND id_destinataire = @idUser
+                AND id_message NOT IN (
+                    SELECT id_message FROM message_utilisateur_statut 
+                    WHERE id_utilisateur = @idUser AND id_status_msg = 3
+                )
+                ON CONFLICT (id_message, id_utilisateur) DO UPDATE 
+                SET id_status_msg = 3;
+            " : @"
+                INSERT INTO message_utilisateur_statut (id_message, id_utilisateur, id_status_msg)
+                SELECT m.id_message, @idUser, 3
+                FROM message m
+                JOIN utilisateur_groupe_discussion ugd ON ugd.id_groupe_discussion = m.id_groupe_discussion
+                WHERE m.id_groupe_discussion = @idDiscussion
+                AND ugd.id_utilisateur = @idUser
+                AND m.id_expediteur != @idUser
+                AND m.id_message NOT IN (
+                    SELECT id_message FROM message_utilisateur_statut 
+                    WHERE id_utilisateur = @idUser AND id_status_msg = 3
+                )
+                ON CONFLICT (id_message, id_utilisateur) DO UPDATE 
+                SET id_status_msg = 3;
+            ";
 
             using var conn = new Connexion().ConnectPostgres();
             await conn.OpenAsync();
@@ -636,6 +695,7 @@ namespace MessagerieInterneAPI.Modules.Discussion
 
             await cmd.ExecuteNonQueryAsync();
         }
+
 
 
         /*public async Task MarkMessagesAsRead(int idUser, int idDiscussion)
