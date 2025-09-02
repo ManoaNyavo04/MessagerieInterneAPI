@@ -145,7 +145,18 @@ namespace MessagerieInterneAPI.Modules.Discussion
             return Ok();
         }
 
+        [HttpGet("searchUserGroup")]
+        public async Task<IActionResult> SearchUtilisateurEtGroupe([FromQuery] string searchTerm)
+        {
+            var idUtilisateurClaim = User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier);
+            if (idUtilisateurClaim == null) return Unauthorized();
 
+            int idUtilisateur = int.Parse(idUtilisateurClaim.Value);
+            Console.WriteLine("id ve hitany (search): " + idUtilisateur);
+
+            var results = _service.SearchUtilisateurEtGroupe(connexion.ConnectPostgres(), idUtilisateur, searchTerm);
+            return Ok(results);
+        }
     }
 }
 

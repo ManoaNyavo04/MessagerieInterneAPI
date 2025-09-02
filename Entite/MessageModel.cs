@@ -26,10 +26,12 @@ namespace MessagerieInterneAPI
         public int Id_status_msg { get; set; }
 
         public bool Est_lu { get; set; }
+        public List<string> Liste_utilisateur_vu { get; set; }
+
 
         public MessageModel() { }
 
-        public MessageModel(int id_message, int id_expediteur, String nomExpediteur, int id_destinataire, int id_groupe_discussion, string contenu, DateTime date_envoi, int id_status_msg, bool estLu)
+        public MessageModel(int id_message, int id_expediteur, String nomExpediteur, int id_destinataire, int id_groupe_discussion, string contenu, DateTime date_envoi, int id_status_msg, bool estLu, List<string> listeUtilisateurVu)
         {
             Id_message = id_message;
             Id_expediteur = id_expediteur;
@@ -40,6 +42,7 @@ namespace MessagerieInterneAPI
             Date_envoie = date_envoi;
             Id_status_msg = id_status_msg;
             Est_lu = estLu;
+            Liste_utilisateur_vu = listeUtilisateurVu;
         }
     }
 }

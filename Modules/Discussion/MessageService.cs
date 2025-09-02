@@ -35,7 +35,13 @@ namespace MessagerieInterneAPI.Modules.Discussion
                     WHERE mus.id_message = v.id_message 
                       AND mus.id_utilisateur != @userId
                       AND mus.id_status_msg = 3
-                ) AS est_lu
+                ) AS est_lu,
+                ARRAY(
+                    SELECT u.prenom
+                    FROM message_utilisateur_statut mus
+                    JOIN utilisateur u ON u.id_utilisateur = mus.id_utilisateur
+                    WHERE mus.id_message = v.id_message AND mus.id_status_msg = 3
+                ) AS liste_utilisateur_vu
             FROM v_utilisateur_message v
             WHERE v.id_groupe_discussion = @id
             ORDER BY v.id_message ASC";
@@ -76,7 +82,7 @@ namespace MessagerieInterneAPI.Modules.Discussion
             using var reader = await cmd.ExecuteReaderAsync();
             while (await reader.ReadAsync())
             {
-                messages.Add(new MessageModel
+                var msg = new MessageModel
                 {
                     Id_message = reader.GetInt32(0),
                     Id_expediteur = reader.GetInt32(1),
@@ -86,9 +92,20 @@ namespace MessagerieInterneAPI.Modules.Discussion
                     Contenu = reader.GetString(5),
                     Date_envoie = reader.GetDateTime(6),
                     Id_status_msg = reader.GetInt32(7),
-                    Est_lu = reader.GetBoolean(8) // 👈 nouveau champ
-                });
+                    Est_lu = reader.GetBoolean(8)
+                };
+
+                if (type == "groupe")
+                {
+                    // Index 9 existe uniquement pour les groupes
+                    msg.Liste_utilisateur_vu = !reader.IsDBNull(9)
+                        ? reader.GetFieldValue<string[]>(9).ToList()
+                        : new List<string>();
+                }
+
+                messages.Add(msg);
             }
+
 
             return messages;
         }
@@ -769,6 +786,86 @@ namespace MessagerieInterneAPI.Modules.Discussion
         }
 
 
+        public List<DiscussionModel> SearchUtilisateurEtGroupe(NpgsqlConnection liasonBase,int idUtilisateur, string searchTerm)
+        {
+            List<DiscussionModel> results = new List<DiscussionModel>();
+
+            if (liasonBase == null || liasonBase.State == ConnectionState.Closed)
+            {
+                Connexion connexion = new Connexion();
+                liasonBase = connexion.ConnectPostgres();
+                liasonBase.Open();
+            }
+
+            try
+            {
+                // 🔎 Requête utilisateurs
+                string sqlUtilisateurs = @"
+                    SELECT id_utilisateur AS id, CONCAT(prenom, ' ', nom) AS nom, 'utilisateur' AS type
+                    FROM v_info_utilisateur
+                    WHERE 
+                        LOWER(nom) LIKE LOWER(@searchTerm)
+                    OR LOWER(prenom) LIKE LOWER(@searchTerm)
+                    OR LOWER(matricule) LIKE LOWER(@searchTerm)";
+
+                using (var cmd = new NpgsqlCommand(sqlUtilisateurs, liasonBase))
+                {
+                    cmd.Parameters.AddWithValue("@searchTerm", "%" + searchTerm + "%");
+                    using (var reader = cmd.ExecuteReader())
+                    {
+                        while (reader.Read())
+                        {
+                            results.Add(new DiscussionModel
+                            {
+                                Id = reader.GetInt32(0),
+                                Nom = reader.GetString(1),
+                                Type = reader.GetString(2)
+                            });
+                        }
+                    }
+                }
+
+                // 🔎 Requête groupes
+                string sqlGroupes = @"
+                    SELECT g.id_groupe_discussion AS id, g.nom, 'groupe' AS type
+                    FROM groupe_discussion g
+                    JOIN utilisateur_groupe ug ON ug.id_groupe_discussion = g.id_groupe_discussion
+                    WHERE ug.id_utilisateur = @idUtilisateur
+                    AND LOWER(g.nom) LIKE LOWER(@searchTerm)";
+
+
+                using (var cmd = new NpgsqlCommand(sqlGroupes, liasonBase))
+                {
+                    cmd.Parameters.AddWithValue("@searchTerm", "%" + searchTerm + "%");
+                    cmd.Parameters.AddWithValue("@idUtilisateur", idUtilisateur);
+                    using (var reader = cmd.ExecuteReader())
+                    {
+                        while (reader.Read())
+                        {
+                            results.Add(new DiscussionModel
+                            {
+                                Id = reader.GetInt32(0),
+                                Nom = reader.GetString(1),
+                                Type = reader.GetString(2)
+                            });
+                        }
+                    }
+                }
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine("Erreur recherche : " + e.Message);
+            }
+            finally
+            {
+                if (liasonBase != null)
+                {
+                    liasonBase.Close();
+                }
+            }
+
+            return results;
+        }
 
 
 

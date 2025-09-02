@@ -280,14 +280,44 @@ WHERE ...
 SELECT 
     v.*,
     ARRAY(
-        SELECT u.nom
+        SELECT u.prenom
         FROM message_utilisateur_statut mus
         JOIN utilisateur u ON u.id_utilisateur = mus.id_utilisateur
         WHERE mus.id_message = v.id_message AND mus.id_status_msg = 3
     ) AS liste_utilisateur_vu
 FROM v_utilisateur_message v
-WHERE v.id_groupe_discussion = 1
+WHERE v.id_groupe_discussion = 5
 ORDER BY v.id_message ASC;
+
+
+
+SELECT 
+    v.*, 
+    EXISTS (
+        SELECT 1 
+        FROM message_utilisateur_statut mus 
+        WHERE mus.id_message = v.id_message 
+            AND mus.id_utilisateur != 1
+            AND mus.id_status_msg = 3
+    ) AS est_lu,
+    ARRAY(
+        SELECT u.prenom
+        FROM message_utilisateur_statut mus
+        JOIN utilisateur u ON u.id_utilisateur = mus.id_utilisateur
+        WHERE mus.id_message = v.id_message AND mus.id_status_msg = 3
+    ) AS liste_utilisateur_vu
+FROM v_utilisateur_message v
+WHERE v.id_groupe_discussion = 8
+ORDER BY v.id_message ASC
+
+
+
+SELECT g.id_groupe_discussion AS id, g.nom, 'groupe' AS type
+FROM groupe_discussion g
+JOIN utilisateur_groupe ug ON ug.id_groupe_discussion = g.id_groupe_discussion
+WHERE ug.id_utilisateur = @idUtilisateur
+  AND LOWER(g.nom) LIKE LOWER(@searchTerm)
+
 
 
 
