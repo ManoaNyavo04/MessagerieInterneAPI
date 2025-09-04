@@ -829,7 +829,7 @@ namespace MessagerieInterneAPI.Modules.Discussion
                 string sqlGroupes = @"
                     SELECT g.id_groupe_discussion AS id, g.nom, 'groupe' AS type
                     FROM groupe_discussion g
-                    JOIN utilisateur_groupe ug ON ug.id_groupe_discussion = g.id_groupe_discussion
+                    JOIN utilisateur_groupe_discussion ug ON ug.id_groupe_discussion = g.id_groupe_discussion
                     WHERE ug.id_utilisateur = @idUtilisateur
                     AND LOWER(g.nom) LIKE LOWER(@searchTerm)";
 

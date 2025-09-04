@@ -64,7 +64,8 @@ namespace MessagerieInterneAPI
                 id_destinataire = idDest,
                 id_groupe_discussion = idGroupe,
                 contenu = message,
-                date_envoie = DateTime.UtcNow.ToString("o")
+                date_envoie = DateTime.UtcNow.ToString("o"),
+                est_lu = false
             };
 
             // ✅ Diffusion ciblée
@@ -99,10 +100,10 @@ namespace MessagerieInterneAPI
             return base.OnConnectedAsync();
         }
 
-        public async Task NotifyMessagesRead(int discussionId, int userId)
+        public async Task NotifyMessagesRead(int discussionId, int userId, int idsDesMessagesLus)
         {
             await Clients.Group($"discussion_{discussionId}")
-                .SendAsync("MessagesRead", new { discussionId, userId });
+                .SendAsync("MessagesRead", new { discussionId, userId, idsDesMessagesLus });
         }
 
 

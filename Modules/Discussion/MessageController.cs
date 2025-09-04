@@ -139,8 +139,8 @@ namespace MessagerieInterneAPI.Modules.Discussion
             var updatedCounts = await _service.GetUnreadCounts(idUtilisateur);
             await _hubContext.Clients.User(idUtilisateur.ToString())
                 .SendAsync("UpdateUnreadCounts", updatedCounts);
-            // await _hubContext.Clients.Group($"discussion_{discussionId}")
-            //     .SendAsync("MessagesRead", new { discussionId, userId = idUtilisateur });
+            await _hubContext.Clients.Group($"discussion_{discussionId}")
+                .SendAsync("MessagesRead", new { discussionId, userId = idUtilisateur });
 
             return Ok();
         }
