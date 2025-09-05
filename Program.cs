@@ -104,6 +104,7 @@ builder.Services.AddCors(options =>
 });
 
 builder.Services.AddScoped<UtilisateurService>();
+
 builder.Services.AddScoped<GroupeDiscussionService>();
 builder.Services.AddScoped<RoleService>();
 builder.Services.AddScoped<MessageService>();
