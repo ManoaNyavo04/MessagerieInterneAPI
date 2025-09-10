@@ -321,3 +321,46 @@ WHERE ug.id_utilisateur = @idUtilisateur
 
 
 
+
+select 
+    pj.id_piece_joint, 
+    pj.id_message, 
+    pj.id_type_piece_joint, 
+    pj.chemin, 
+    pj.date_ajout, 
+    tpj.type 
+from piece_joint pj 
+join type_piece_joint tpj on tpj.id_type_piece_joint = pj.id_type_piece_joint;
+
+
+select 
+        m.id_message,
+        m.id_expediteur,
+        u.nom || ' ' || u.prenom AS nom_expediteur,
+        m.id_destinataire,
+        m.id_groupe_discussion,
+        m.contenu,
+        m.date_envoie,
+        m.id_status_msg,
+        pj.id_piece_joint,
+        pj.chemin
+    from message m 
+    join utilisateur u on u.id_utilisateur = m.id_expediteur 
+    left join piece_joint pj on pj.id_message = m.id_message
+    order by id_message desc
+
+
+SELECT 
+                v.*,
+                EXISTS (
+                    SELECT 1 
+                    FROM message_utilisateur_statut mus 
+                    WHERE mus.id_message = v.id_message 
+                      AND mus.id_utilisateur = 7
+                      AND mus.id_status_msg = 3
+                ) AS est_lu
+            FROM v_utilisateur_message v
+            WHERE 
+                (v.id_expediteur = 7 AND v.id_destinataire = 1)
+             OR (v.id_expediteur = 1 AND v.id_destinataire = 7)
+            ORDER BY v.id_message ASC;

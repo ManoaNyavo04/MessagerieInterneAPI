@@ -9,12 +9,14 @@ namespace MessagerieInterneAPI
         private readonly MessageService _messageService;
 
         private readonly GroupeDiscussionService _grpDiscuService;
+        private readonly PieceJointService _pieceJointeService;
         private Connexion connexion = new Connexion();
 
-        public ChatHub(MessageService messageService, GroupeDiscussionService grpDiscuService)
+        public ChatHub(MessageService messageService, GroupeDiscussionService grpDiscuService, PieceJointService pieceJointeService)
         {
             _messageService = messageService;
             _grpDiscuService = grpDiscuService;
+            _pieceJointeService = pieceJointeService;
         }
         public async Task SendMessage(string user, string message)
         {
@@ -34,7 +36,7 @@ namespace MessagerieInterneAPI
             await Clients.Group(groupName).SendAsync("ReceiveMessage", user, message);
         }
 
-        public async Task SendMessageToDiscussion(int idExp, int? idDest, int? idGroupe, string message, string groupName)
+        public async Task<object> SendMessageToDiscussion(int idExp, int? idDest, int? idGroupe, string message, string groupName)
         {
             if (idGroupe == null && idDest == null)
                 throw new ArgumentException("Le message doit avoir un destinataire ou un groupe.");
@@ -55,6 +57,8 @@ namespace MessagerieInterneAPI
 
             string nomExpediteur = await _messageService.GetNomExpediteur(connexion.ConnectPostgres(), idExp, idDest ?? 0);
 
+            var pieceJointe = await _pieceJointeService.GetPieceJointeParMessage(connexion.ConnectPostgres(), insertedMessage.Id_message);
+
             var payload = new
             {
                 id_message = insertedMessage.Id_message,
@@ -65,7 +69,8 @@ namespace MessagerieInterneAPI
                 id_groupe_discussion = idGroupe,
                 contenu = message,
                 date_envoie = DateTime.UtcNow.ToString("o"),
-                est_lu = false
+                est_lu = false,
+                piece_jointe = pieceJointe?.Select(pj => pj.Chemin).ToList()
             };
 
             // ✅ Diffusion ciblée
@@ -92,6 +97,7 @@ namespace MessagerieInterneAPI
                 await Clients.User(idDest.Value.ToString()).SendAsync("UpdateUnreadCounts", unreadCounts);
                 // await Clients.User(idExp.ToString()).SendAsync("UpdateUnreadCounts", unreadCounts);
             }
+            return payload;
         }
 
         public override Task OnConnectedAsync()

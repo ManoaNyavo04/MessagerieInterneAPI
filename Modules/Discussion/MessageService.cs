@@ -35,7 +35,7 @@ namespace MessagerieInterneAPI.Modules.Discussion
                     WHERE mus.id_message = v.id_message 
                       AND mus.id_utilisateur != @userId
                       AND mus.id_status_msg = 3
-                ) AS est_lu,
+                )::boolean AS est_lu,
                 ARRAY(
                     SELECT u.prenom
                     FROM message_utilisateur_statut mus
@@ -57,7 +57,7 @@ namespace MessagerieInterneAPI.Modules.Discussion
                     WHERE mus.id_message = v.id_message 
                       AND mus.id_utilisateur = @dest 
                       AND mus.id_status_msg = 3
-                ) AS est_lu
+                )::boolean AS est_lu
             FROM v_utilisateur_message v
             WHERE 
                 (v.id_expediteur = @userId AND v.id_destinataire = @id)
@@ -92,7 +92,9 @@ namespace MessagerieInterneAPI.Modules.Discussion
                     Contenu = reader.GetString(5),
                     Date_envoie = reader.GetDateTime(6),
                     Id_status_msg = reader.GetInt32(7),
-                    Est_lu = reader.GetBoolean(8)
+                    Id_piece_jointe = reader.IsDBNull(8) ? 0 : reader.GetInt32(8),
+                    Chemin = reader.IsDBNull(9) ? null : reader.GetString(9),
+                    Est_lu = reader.GetBoolean(10)
                 };
 
                 if (type == "groupe")
