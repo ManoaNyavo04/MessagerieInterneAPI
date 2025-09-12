@@ -60,6 +60,7 @@ namespace MessagerieInterneAPI
             if (idGroupeDiscussion <= 0)
             {
                 return BadRequest("L'ID du groupe de discussion est invalide.");
+                
             }
             var membres = await _service.GetMembresGroupe(connexion.ConnectPostgres(), idGroupeDiscussion);
 

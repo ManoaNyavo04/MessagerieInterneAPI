@@ -80,6 +80,7 @@ namespace MessagerieInterneAPI.Modules.Discussion
 
             var messages = new List<MessageModel>();
             using var reader = await cmd.ExecuteReaderAsync();
+
             while (await reader.ReadAsync())
             {
                 var msg = new MessageModel
@@ -92,14 +93,14 @@ namespace MessagerieInterneAPI.Modules.Discussion
                     Contenu = reader.GetString(5),
                     Date_envoie = reader.GetDateTime(6),
                     Id_status_msg = reader.GetInt32(7),
-                    Est_lu = reader.GetBoolean(8)
+                    Est_lu = reader.GetBoolean(10)
                 };
 
                 if (type == "groupe")
                 {
                     // Index 9 existe uniquement pour les groupes
                     msg.Liste_utilisateur_vu = !reader.IsDBNull(9)
-                        ? reader.GetFieldValue<string[]>(9).ToList()
+                        ? reader.GetFieldValue<string[]>(11).ToList()
                         : new List<string>();
                 }
 
