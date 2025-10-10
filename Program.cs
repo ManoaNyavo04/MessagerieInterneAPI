@@ -7,6 +7,7 @@ using MessagerieInterneAPI.Modules.Role;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.FileProviders;
 using Microsoft.IdentityModel.Tokens;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -108,6 +109,7 @@ builder.Services.AddScoped<UtilisateurService>();
 builder.Services.AddScoped<GroupeDiscussionService>();
 builder.Services.AddScoped<RoleService>();
 builder.Services.AddScoped<MessageService>();
+builder.Services.AddScoped<PieceJointService>();
 builder.Services.AddSignalR();
 
 builder.Services.AddSingleton<IUserIdProvider, MyCustomUserIdProvider>();
@@ -133,6 +135,17 @@ app.MapControllers();
 
 
 app.MapHub<ChatHub>("/chathub");
+app.UseStaticFiles(); // pour wwwroot par défaut
+
+// si tu stockes les fichiers ailleurs, par ex. "Uploads"
+app.UseStaticFiles(new StaticFileOptions
+{
+    FileProvider = new PhysicalFileProvider(
+        Path.Combine(Directory.GetCurrentDirectory(), "Uploads")
+    ),
+    RequestPath = "/Uploads"
+});
+
 
 
 

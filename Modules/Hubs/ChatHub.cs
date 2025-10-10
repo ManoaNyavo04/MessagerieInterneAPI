@@ -9,12 +9,14 @@ namespace MessagerieInterneAPI
         private readonly MessageService _messageService;
 
         private readonly GroupeDiscussionService _grpDiscuService;
+        private readonly PieceJointService _pieceJointeService;
         private Connexion connexion = new Connexion();
 
-        public ChatHub(MessageService messageService, GroupeDiscussionService grpDiscuService)
+        public ChatHub(MessageService messageService, GroupeDiscussionService grpDiscuService, PieceJointService pieceJointeService)
         {
             _messageService = messageService;
             _grpDiscuService = grpDiscuService;
+            _pieceJointeService = pieceJointeService;
         }
         public async Task SendMessage(string user, string message)
         {
@@ -34,7 +36,7 @@ namespace MessagerieInterneAPI
             await Clients.Group(groupName).SendAsync("ReceiveMessage", user, message);
         }
 
-        public async Task SendMessageToDiscussion(int idExp, int? idDest, int? idGroupe, string message, string groupName)
+        public async Task<object> SendMessageToDiscussion(int idExp, int? idDest, int? idGroupe, string message, string groupName, bool diffuser = true)
         {
             if (idGroupe == null && idDest == null)
                 throw new ArgumentException("Le message doit avoir un destinataire ou un groupe.");
@@ -55,6 +57,19 @@ namespace MessagerieInterneAPI
 
             string nomExpediteur = await _messageService.GetNomExpediteur(connexion.ConnectPostgres(), idExp, idDest ?? 0);
 
+            var pieceJointe = await _pieceJointeService.GetPieceJointeParMessage(connexion.ConnectPostgres(), insertedMessage.Id_message);
+
+            // Supposons qu'on veut récupérer uniquement le premier fichier joint s'il existe
+            string nomFichier = null;
+            string cheminFichier = null;
+
+            if (pieceJointe != null && pieceJointe.Count > 0)
+            {
+                var premierFichier = pieceJointe[0];
+                nomFichier = premierFichier.Nom_original;
+                cheminFichier = premierFichier.Chemin;
+            }
+
             var payload = new
             {
                 id_message = insertedMessage.Id_message,
@@ -65,7 +80,107 @@ namespace MessagerieInterneAPI
                 id_groupe_discussion = idGroupe,
                 contenu = message,
                 date_envoie = DateTime.UtcNow.ToString("o"),
-                est_lu = false
+                est_lu = false,
+                nom_fichier = nomFichier,
+                chemin_fichier = cheminFichier
+                /*piece_jointe = pieceJointe?.Select(pj => new
+                {
+                    nom = pj.Nom_original,
+                    chemin = pj.Chemin
+                }).ToList()*/
+
+            };
+
+
+            // ✅ Diffusion ciblée
+            bool messageVide = string.IsNullOrWhiteSpace(message);
+            bool aucunePieceJointe = pieceJointe == null || pieceJointe.Count == 0;
+
+            if (diffuser)
+            {
+                // ✅ Toujours envoyer le message, même si le contenu est vide (fichier seul)
+                if (idGroupe != null)
+                {
+                    await Clients.Group(groupName).SendAsync("ReceiveMessage", payload);
+
+                    var membres = await _grpDiscuService.GetMembresGroupe(connexion.ConnectPostgres(), idGroupe.Value);
+                    foreach (var membre in membres)
+                    {
+                        if (membre.Id_utilisateur != idExp)
+                        {
+                            var unreadCounts = await _messageService.GetUnreadCounts(membre.Id_utilisateur);
+                            await Clients.User(membre.Id_utilisateur.ToString()).SendAsync("UpdateUnreadCounts", unreadCounts);
+                        }
+                    }
+                }
+                else if (idDest != null)
+                {
+                    await Clients.User(idDest.ToString()).SendAsync("ReceiveMessage", payload);
+                    await Clients.User(idExp.ToString()).SendAsync("ReceiveMessage", payload);
+
+                    var unreadCounts = await _messageService.GetUnreadCounts(idDest.Value);
+                    await Clients.User(idDest.Value.ToString()).SendAsync("UpdateUnreadCounts", unreadCounts);
+                }
+            }
+
+            return payload;
+        }
+
+        public async Task UpdateMessageWithFile(int idMessage, string nomFichier, string cheminFichier, int? idDest, int? idGroupe, string groupName)
+        {
+            var payload = new
+            {
+                id_message = idMessage,
+                nom_fichier = nomFichier,
+                chemin_fichier = cheminFichier
+            };
+
+            if (idGroupe != null)
+            {
+                await Clients.Group(groupName).SendAsync("UpdateMessage", payload);
+            }
+            else if (idDest != null)
+            {
+                await Clients.User(idDest.ToString()).SendAsync("UpdateMessage", payload);
+            }
+        }
+
+
+        public async Task<object> ReenvoyerMessage(int idExp, int? idDest, int? idGroupe, string message, string groupName)
+        {
+            if (idGroupe == null && idDest == null)
+                throw new ArgumentException("Le message doit avoir un destinataire ou un groupe.");
+
+            var msg = new MessageModel
+            {
+                Id_expediteur = idExp,
+                Id_destinataire = idDest,
+                Id_groupe_discussion = idGroupe,
+                Contenu = message,
+                Date_envoie = DateTime.UtcNow,
+                Id_status_msg = 1
+            };
+
+            // var liason = new Connexion().ConnectPostgres();
+            // ✅ Insert en DB (connexion gérée en pool)
+            var insertedMessage = await _messageService.SendMessage(msg);
+
+            string nomExpediteur = await _messageService.GetNomExpediteur(connexion.ConnectPostgres(), idExp, idDest ?? 0);
+
+            var pieceJointe = await _pieceJointeService.GetPieceJointeParMessage(connexion.ConnectPostgres(), insertedMessage.Id_message);
+
+            var payload = new
+            {
+                id_message = insertedMessage.Id_message,
+                id_discussion = idGroupe ?? idDest,
+                id_expediteur = idExp,
+                expediteur_nom = nomExpediteur,
+                id_destinataire = idDest,
+                id_groupe_discussion = idGroupe,
+                contenu = message,
+                date_envoie = DateTime.UtcNow.ToString("o"),
+                est_lu = false,
+                piece_jointe = pieceJointe?.Select(pj => pj.Chemin).ToList()
             };
 
             // ✅ Diffusion ciblée
@@ -82,6 +197,7 @@ namespace MessagerieInterneAPI
                         await Clients.User(membre.Id_utilisateur.ToString()).SendAsync("UpdateUnreadCounts", unreadCounts);
                     }
                 }
+
             }
             else if (idDest != null)
             {
@@ -92,7 +208,9 @@ namespace MessagerieInterneAPI
                 await Clients.User(idDest.Value.ToString()).SendAsync("UpdateUnreadCounts", unreadCounts);
                 // await Clients.User(idExp.ToString()).SendAsync("UpdateUnreadCounts", unreadCounts);
             }
+            return payload;
         }
+
 
         public override Task OnConnectedAsync()
         {
