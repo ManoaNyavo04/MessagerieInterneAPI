@@ -96,6 +96,8 @@ CREATE TABLE piece_joint (
     foreign key (id_message) references message(id_message),
     foreign key (id_type_piece_joint) references type_piece_joint(id_type_piece_joint)
 );
+ALTER TABLE piece_joint ADD COLUMN nom_original TEXT;
+
 
 CREATE TABLE message_utilisateur_statut (
     id_message_utilisateur_statut serial primary key,

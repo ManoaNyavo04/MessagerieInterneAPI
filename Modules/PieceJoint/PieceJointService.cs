@@ -7,7 +7,7 @@ namespace MessagerieInterneAPI
     public class PieceJointService
     {
         private Connexion connexion = new Connexion();
-        public async Task AjouterPieceJointe(NpgsqlConnection liaisonbase, int idMessage, int idType, string chemin)
+        public async Task AjouterPieceJointe(NpgsqlConnection liaisonbase, int idMessage, int idType, string chemin, string nomOriginal)
         {
 
             if (liaisonbase == null || liaisonbase.State == ConnectionState.Closed)
@@ -19,13 +19,14 @@ namespace MessagerieInterneAPI
             try
             {
                 string sql = @"
-                INSERT INTO piece_joint (id_message, id_type_piece_joint, chemin, date_ajout)
-                VALUES (@idMessage, @idType, @chemin, NOW());";
+                INSERT INTO piece_joint (id_message, id_type_piece_joint, chemin, date_ajout, nom_original)
+                VALUES (@idMessage, @idType, @chemin, NOW(), @nomOriginal);";
                 using (var cmdCreateur = new NpgsqlCommand(sql, liaisonbase))
                 {
                     cmdCreateur.Parameters.AddWithValue("@idMessage", idMessage);
                     cmdCreateur.Parameters.AddWithValue("@idType", idType);
                     cmdCreateur.Parameters.AddWithValue("@chemin", chemin);
+                    cmdCreateur.Parameters.AddWithValue("@nomOriginal", nomOriginal);
                     await cmdCreateur.ExecuteNonQueryAsync();
                 }
             }
@@ -93,14 +94,15 @@ namespace MessagerieInterneAPI
             {
                 if (liaisonbase != null)
                     liaisonbase.Close();
+                    
             }
         }
 
         public async Task<List<PieceJointModel>> GetPieceJointeParMessage(NpgsqlConnection liaisonbase, int idMessage)
         {
             string sql = @"
-        select * from v_piece_joint
-        where id_message = @idmessage;";
+            select * from v_piece_joint
+            where id_message = @idmessage;";
 
             if (liaisonbase == null || liaisonbase.State == ConnectionState.Closed)
             {
@@ -124,7 +126,8 @@ namespace MessagerieInterneAPI
                         Id_type_piece_jointe = reader.GetInt32(2),
                         Chemin = reader.GetString(3),
                         Date_ajout = reader.GetDateTime(4),
-                        Type = reader.GetString(5)
+                        Type = reader.GetString(5),
+                        Nom_original = reader.GetString(6)
                     };
 
                     pieces.Add(pj);

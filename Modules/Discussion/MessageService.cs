@@ -37,11 +37,11 @@ namespace MessagerieInterneAPI.Modules.Discussion
                       AND mus.id_status_msg = 3
                 )::boolean AS est_lu,
                 ARRAY(
-                    SELECT u.prenom
+                    SELECT u.prenom::text
                     FROM message_utilisateur_statut mus
                     JOIN utilisateur u ON u.id_utilisateur = mus.id_utilisateur
                     WHERE mus.id_message = v.id_message AND mus.id_status_msg = 3
-                ) AS liste_utilisateur_vu
+                )::text[] AS liste_utilisateur_vu
             FROM v_utilisateur_message v
             WHERE v.id_groupe_discussion = @id
             ORDER BY v.id_message ASC";
@@ -94,16 +94,19 @@ namespace MessagerieInterneAPI.Modules.Discussion
                     Id_status_msg = reader.GetInt32(7),
                     Id_piece_jointe = reader.IsDBNull(8) ? 0 : reader.GetInt32(8),
                     Chemin = reader.IsDBNull(9) ? null : reader.GetString(9),
-                    Est_lu = reader.GetBoolean(10)
+                    Nom_original = reader.IsDBNull(10) ? null : reader.GetString(10),
+                    Est_lu = reader.GetBoolean(11)
                 };
 
                 if (type == "groupe")
                 {
-                    // Index 9 existe uniquement pour les groupes
-                    msg.Liste_utilisateur_vu = !reader.IsDBNull(9)
-                        ? reader.GetFieldValue<string[]>(9).ToList()
-                        : new List<string>();
+                    // Index 12 existe uniquement pour les groupes
+                    msg.Liste_utilisateur_vu = !reader.IsDBNull(12)
+                    ? reader.GetFieldValue<string[]>(12).ToList()
+                    : new List<string>();
+
                 }
+                
 
                 messages.Add(msg);
             }
@@ -547,6 +550,7 @@ namespace MessagerieInterneAPI.Modules.Discussion
 
                 return discuss;
             }
+            
         }
 
         public async Task<List<ComptageMsgNonLuDTO>> GetUnreadCounts(int idUser)
@@ -788,7 +792,7 @@ namespace MessagerieInterneAPI.Modules.Discussion
         }
 
 
-        public List<DiscussionModel> SearchUtilisateurEtGroupe(NpgsqlConnection liasonBase,int idUtilisateur, string searchTerm)
+        public List<DiscussionModel> SearchUtilisateurEtGroupe(NpgsqlConnection liasonBase, int idUtilisateur, string searchTerm)
         {
             List<DiscussionModel> results = new List<DiscussionModel>();
 

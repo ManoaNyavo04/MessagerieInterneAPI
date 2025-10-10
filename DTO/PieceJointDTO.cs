@@ -9,5 +9,8 @@ namespace MessagerieInterneAPI
 
         [Required]
         public int IdMessage { get; set; }
+
+        [Required]
+        public int IdType { get; set; }
     }
 }

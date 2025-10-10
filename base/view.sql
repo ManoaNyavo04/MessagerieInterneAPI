@@ -68,7 +68,8 @@ CREATE or REPLACE VIEW v_utilisateur_message AS (
         m.date_envoie,
         m.id_status_msg,
         pj.id_piece_joint,
-        pj.chemin
+        pj.chemin,
+        pj.nom_original
     from message m 
     join utilisateur u on u.id_utilisateur = m.id_expediteur 
     left join piece_joint pj on pj.id_message = m.id_message
@@ -82,7 +83,9 @@ CREATE or REPLACE VIEW v_piece_joint AS (
         pj.id_type_piece_joint, 
         pj.chemin, 
         pj.date_ajout, 
-        tpj.type 
+        tpj.type,
+        pj.nom_original 
     from piece_joint pj 
     join type_piece_joint tpj on tpj.id_type_piece_joint = pj.id_type_piece_joint
 );
+
