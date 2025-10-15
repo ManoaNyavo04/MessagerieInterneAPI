@@ -1,6 +1,9 @@
 # Fichiers binaires et objets .NET
 bin/
 obj/
+*.dll
+*.exe
+*.pdb
 
 # Fichiers utilisateur Visual Studio
 *.user

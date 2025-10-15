@@ -73,8 +73,9 @@ namespace MessagerieInterneAPI
                 connexion.ConnectPostgres(),
                 dto.IdMessage,
                 dto.IdType,
+
                 fileName,
-                nomOriginal 
+                nomOriginal
             );
 
             return Ok(new { chemin = fileName,  nom = nomOriginal });
