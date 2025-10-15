@@ -1,6 +1,7 @@
 # Fichiers binaires et objets .NET
 bin/
 obj/
+publish/
 *.dll
 *.exe
 *.pdb
