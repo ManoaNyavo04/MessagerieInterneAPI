@@ -110,6 +110,7 @@ builder.Services.AddScoped<GroupeDiscussionService>();
 builder.Services.AddScoped<RoleService>();
 builder.Services.AddScoped<MessageService>();
 builder.Services.AddScoped<PieceJointService>();
+builder.Services.AddScoped<EspaceTravailService>();
 builder.Services.AddSignalR();
 
 builder.Services.AddSingleton<IUserIdProvider, MyCustomUserIdProvider>();
@@ -128,7 +129,7 @@ if (app.Environment.IsDevelopment())
 app.UseRouting();
 
 app.UseCors("AllowLocalhost3000");
-app.Urls.Add("http://10.5.100.7:5040");
+// app.Urls.Add("http://10.5.100.7:5040");
 
 app.UseAuthentication();
 app.UseAuthorization();
@@ -140,7 +141,8 @@ app.MapHub<ChatHub>("/chathub");
 app.UseStaticFiles(); // pour wwwroot par défaut
 
 // si tu stockes les fichiers ailleurs, par ex. "Uploads"
-var uploadsPath = Path.Combine(AppContext.BaseDirectory, "..", "Uploads");
+// var uploadsPath = Path.Combine(AppContext.BaseDirectory, "..", "Uploads");
+var uploadsPath = Path.Combine(AppContext.BaseDirectory, "Uploads"); //local "Uploads" folder
 
 // Normalise le chemin absolu (résout les "..")
 uploadsPath = Path.GetFullPath(uploadsPath);
@@ -157,6 +159,8 @@ app.UseStaticFiles(new StaticFileOptions
 
 
 
+
+ 
 
 
 

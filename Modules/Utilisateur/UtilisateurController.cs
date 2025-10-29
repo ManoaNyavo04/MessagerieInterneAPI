@@ -1,4 +1,5 @@
-﻿using MessagerieInterneAPI.Data;
+﻿using System.Security.Claims;
+using MessagerieInterneAPI.Data;
 using MessagerieInterneAPI.Entite;
 using Microsoft.AspNetCore.Mvc;
 using Npgsql;
@@ -12,13 +13,15 @@ namespace MessagerieInterneAPI.Modules.Utilisateur
         private readonly AppDbContext _context;
         private readonly IConfiguration _config;
         private UtilisateurService _service;
+        private EspaceTravailService _espaceService;
         private LoginRequest login = new LoginRequest();
 
-        public UtilisateurController(IConfiguration config, AppDbContext context, UtilisateurService service)
+        public UtilisateurController(IConfiguration config, AppDbContext context, UtilisateurService service, EspaceTravailService espaceService)
         {
             _config = config;
             _context = context;
             _service = service ?? throw new ArgumentNullException(nameof(service));
+            _espaceService = espaceService ?? throw new ArgumentNullException(nameof(espaceService));
         }
 
 
@@ -39,19 +42,50 @@ namespace MessagerieInterneAPI.Modules.Utilisateur
                 return Unauthorized("Matricule ou mot de passe invalide eeeeeeeeee.");
             }
 
-            var token = login.GenererToken(siUtilisateur, _config);
+            // 🔹 Récupère tous les espaces liés à cet utilisateur
+            var espacesTravail = await _espaceService.GetEspacesByUtilisateurIdAsync(siUtilisateur.Id_utilisateur);
+
+            // 🔹 Sélectionne le premier espace comme espace actif par défaut
+            int espaceActif = espacesTravail.FirstOrDefault()?.IdEspaceTravail ?? 0;
+
+            var token = login.GenererToken(siUtilisateur, _config, espaceActif);
             var profilUtilisateur = _service.GetProfilUtilisateur(siUtilisateur);
+            // var espacesTravail = await _espaceService.GetEspacesByUtilisateurIdAsync(siUtilisateur.Id_utilisateur);
             return Ok(new
             {
                 token,
-                profilUtilisateur
+                profilUtilisateur,
+                espacesTravail
             });
 
         }
 
+        [HttpPost("changerEspace")]
+        public async Task<IActionResult> ChangerEspaceAsync([FromBody] int nouvelEspace)
+        {
+            var idUtilisateurClaim = User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier);
+            if (idUtilisateurClaim == null) return Unauthorized();
+
+            int idUtilisateur = int.Parse(idUtilisateurClaim.Value);
+
+            // ⚙️ Récupère l'utilisateur depuis la base
+            var utilisateur = await _service.GetUtilisateurById(idUtilisateur);
+            if (utilisateur == null) return NotFound();
+
+            // 🧠 Génère un nouveau token avec le nouvel espace
+            var token = new LoginRequest().GenererToken(utilisateur, _config, nouvelEspace);
+            var profilUtilisateur = _service.GetProfilUtilisateur(utilisateur);
+
+            return Ok(new { token, profilUtilisateur });
+        }
+
+
         [HttpGet("allUsers")]
+
         public async Task<IActionResult> GetAllUtilisateurs()
         {
+
+
             Connexion connect = new Connexion();
             var connex = connect.ConnectPostgres();
             var result = _service.GetAllUtilisateurs(connex);
@@ -71,12 +105,26 @@ namespace MessagerieInterneAPI.Modules.Utilisateur
         }
 
         [HttpGet("searchUser")]
-        public async Task<IActionResult> SearchUser([FromQuery] string searchTerm)
+        public async Task<IActionResult> SearchUser([FromQuery] string searchTerm, [FromQuery] int idEspaceTravail)
         {
             Connexion connect = new Connexion();
             var connex = connect.ConnectPostgres();
-            var result = _service.SearchUtilisateur(connex, searchTerm);
+            var result = _service.SearchUtilisateur(connex, searchTerm, idEspaceTravail);
             return Ok(result);
+        }
+
+        [HttpGet("allUserApi")]
+        public async Task<IActionResult> GetUtilisateurApi()
+        {
+            var employes = await _service.GetAllEmployesApi();
+            return Ok(employes);
+        }
+
+        [HttpPost("rafraichir")]
+        public async Task<IActionResult> RafraichirUtilisateurs()
+        {
+            await _service.SynchroniserUtilisateursAsync();
+            return Ok(new { message = "Synchronisation terminée avec succès." });
         }
     }
 }

@@ -364,3 +364,44 @@ SELECT
                 (v.id_expediteur = 7 AND v.id_destinataire = 1)
              OR (v.id_expediteur = 1 AND v.id_destinataire = 7)
             ORDER BY v.id_message ASC;
+
+
+
+
+
+
+
+select 
+    u.id_utilisateur, 
+    u.matricule, 
+    u.nom, 
+    u.prenom, 
+    et.id_espace_travail, 
+    et.nom as espace_travail, 
+    et.id_pole 
+from utilisateur_espace_travail uet 
+join utilisateur u on u.id_utilisateur = uet.id_utilisateur 
+join espace_travail et on et.id_espace_travail = uet.id_espace_travail;
+
+
+SELECT DISTINCT
+    CASE 
+        WHEN m.id_expediteur = 28 THEN m.id_destinataire 
+        ELSE m.id_expediteur 
+    END AS id_autre_utilisateur,
+    
+    CASE 
+        WHEN m.id_expediteur = 28 THEN d.nom || ' ' || d.prenom 
+        ELSE e.nom || ' ' || e.prenom 
+    END AS nom_autre_utilisateur,
+    
+    'prive' AS type
+FROM message m
+JOIN utilisateur e ON e.id_utilisateur = m.id_expediteur
+JOIN utilisateur d ON d.id_utilisateur = m.id_destinataire
+JOIN utilisateur_espace_travail ue1 ON ue1.id_utilisateur = e.id_utilisateur
+JOIN utilisateur_espace_travail ue2 ON ue2.id_utilisateur = d.id_utilisateur
+WHERE (m.id_expediteur = 28 OR m.id_destinataire = 28)
+  AND ue1.id_espace_travail = 7
+  AND ue2.id_espace_travail = 7
+  AND m.id_groupe_discussion IS NULL;

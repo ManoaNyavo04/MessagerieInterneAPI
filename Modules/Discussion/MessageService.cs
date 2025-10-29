@@ -106,7 +106,7 @@ namespace MessagerieInterneAPI.Modules.Discussion
                     : new List<string>();
 
                 }
-                
+
 
                 messages.Add(msg);
             }
@@ -341,10 +341,15 @@ namespace MessagerieInterneAPI.Modules.Discussion
 
         }*/
 
-        public List<DiscussionModel> GetGrpDiscussionByUser(int userId, NpgsqlConnection liasonBase)
+        public List<DiscussionModel> GetGrpDiscussionByUser(int userId, int idEspaceTravail, NpgsqlConnection liasonBase)
         {
             List<DiscussionModel> discussions = new List<DiscussionModel>();
-            String sql = "SELECT id_groupe_discussion, groupe, 'groupe' AS type FROM v_utilisateur_groupe_discussion WHERE id_utilisateur = @userId";
+            string sql = @"
+                SELECT gd.id_groupe_discussion, gd.nom AS groupe, 'groupe' AS type
+                FROM utilisateur_groupe_discussion ugd
+                JOIN groupe_discussion gd ON gd.id_groupe_discussion = ugd.id_groupe_discussion
+                WHERE ugd.id_utilisateur = @userId 
+                AND gd.id_espace_travail = @idEspaceTravail";
 
             if (liasonBase == null || liasonBase.State == ConnectionState.Closed)
             {
@@ -357,6 +362,8 @@ namespace MessagerieInterneAPI.Modules.Discussion
             {
                 NpgsqlCommand cmd = new NpgsqlCommand(sql, liasonBase);
                 cmd.Parameters.AddWithValue("@userId", userId);
+                cmd.Parameters.AddWithValue("@idEspaceTravail", idEspaceTravail);
+
                 NpgsqlDataReader reader = cmd.ExecuteReader();
 
                 while (reader.Read())
@@ -386,26 +393,25 @@ namespace MessagerieInterneAPI.Modules.Discussion
         }
 
 
-        public List<DiscussionModel> GetDiscussionIndividuelleByUser(int userId, NpgsqlConnection liasonBase)
+        public List<DiscussionModel> GetDiscussionIndividuelleByUser(int userId, int idEspaceTravail, NpgsqlConnection liasonBase)
         {
             List<DiscussionModel> discussions = new List<DiscussionModel>();
-            String sql = @"SELECT 
-                    CASE 
-                        WHEN id_expediteur = @userId THEN id_destinataire
-                        ELSE id_expediteur
-                    END AS id_autre_utilisateur,
-                    
-                    CASE 
-                        WHEN id_expediteur = @userId THEN nom_destinataire
-                        ELSE nom_expediteur
-                    END AS nom_autre_utilisateur,
-                    
+            String sql = @"SELECT DISTINCT
+                    CASE WHEN m.id_expediteur = @userId THEN m.id_destinataire ELSE m.id_expediteur END AS id_autre_utilisateur,
+                    CASE WHEN m.id_expediteur = @userId THEN d.nom || ' ' || d.prenom ELSE e.nom || ' ' || e.prenom END AS nom_autre_utilisateur,
                     'prive' AS type
-                FROM v_discussions_individuelles
-                WHERE id_expediteur = @userId OR id_destinataire = @userId
-                GROUP BY id_autre_utilisateur, nom_autre_utilisateur";
+                FROM message m
+                JOIN utilisateur e ON e.id_utilisateur = m.id_expediteur
+                JOIN utilisateur d ON d.id_utilisateur = m.id_destinataire
+                JOIN utilisateur_espace_travail ue1 ON ue1.id_utilisateur = e.id_utilisateur
+                JOIN utilisateur_espace_travail ue2 ON ue2.id_utilisateur = d.id_utilisateur
+                WHERE (m.id_expediteur = @userId OR m.id_destinataire = @userId)
+                AND ue1.id_espace_travail = @idEspaceTravail
+                AND ue2.id_espace_travail = @idEspaceTravail
+                AND m.id_groupe_discussion IS NULL;";
 
             Console.WriteLine("SQL Query: " + sql);
+
             if (liasonBase == null || liasonBase.State == ConnectionState.Closed)
             {
                 Connexion connexion = new Connexion();
@@ -417,6 +423,8 @@ namespace MessagerieInterneAPI.Modules.Discussion
             {
                 NpgsqlCommand cmd = new NpgsqlCommand(sql, liasonBase);
                 cmd.Parameters.AddWithValue("@userId", userId);
+                cmd.Parameters.AddWithValue("@idEspaceTravail", idEspaceTravail); // ✅ paramètre manquant
+
                 NpgsqlDataReader reader = cmd.ExecuteReader();
 
                 while (reader.Read())
@@ -444,6 +452,7 @@ namespace MessagerieInterneAPI.Modules.Discussion
 
             return discussions;
         }
+
 
 
         /*public async Task<DiscussionModel> VerifOuCreeDiscussionIndividuelle(NpgsqlConnection liasonBase, int idExpediteur, int idDestinataire)
@@ -527,7 +536,7 @@ namespace MessagerieInterneAPI.Modules.Discussion
         }
 
         public async Task<DiscussionModel> VerifOuCreeDiscussionIndividuelle(NpgsqlConnection connexion,
-            int idExpediteur, DiscussionModel discussion)
+            int idExpediteur, DiscussionModel discussion, int espace)
         {
 
             Console.WriteLine(discussion.Id + " " + discussion.Nom);
@@ -538,7 +547,7 @@ namespace MessagerieInterneAPI.Modules.Discussion
             {
 
                 Console.WriteLine("✅ Discussion trouvée, récupération des messages...");
-                var messages = GetDiscussionIndividuelleByUser(idExpediteur, connexion);
+                var messages = GetDiscussionIndividuelleByUser(idExpediteur, espace, connexion);
                 return messages.FirstOrDefault();
             }
             else
@@ -550,7 +559,7 @@ namespace MessagerieInterneAPI.Modules.Discussion
 
                 return discuss;
             }
-            
+
         }
 
         public async Task<List<ComptageMsgNonLuDTO>> GetUnreadCounts(int idUser)

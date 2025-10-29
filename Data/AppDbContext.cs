@@ -15,6 +15,12 @@ namespace MessagerieInterneAPI.Data
         public DbSet<MessageModel> Message { get; set; }
         public DbSet<RoleModel> Role { get; set; }
         public DbSet<GroupeDiscussionModel> GroupeDiscussion { get; set; }
+        public DbSet<EspaceTravailModel> EspaceTravail { get; set; }
+        public DbSet<PoleModel> Pole { get; set; }
+        public DbSet<UtilisateurEspaceTravailModel> UtilisateurEspaceTravail { get; set; }
+        public DbSet<UtilisateurTableModel> UtilisateurTable { get; set; }
+        public DbSet<UtilisateurEspaceTravailView> UtilisateurEspaceTravailView { get; set; }
+        
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {

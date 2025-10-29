@@ -78,10 +78,12 @@ namespace MessagerieInterneAPI
                 nomOriginal
             );
 
-            return Ok(new { chemin = fileName,  nom = nomOriginal });
+            return Ok(new { chemin = fileName, nom = nomOriginal });
         }
 
 
+        //https://10.5.100.7:8888/api/Employe
+        // BEARER_TOKEN= eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1bmlxdWVfbmFtZSI6IkxhbGFtYnlDYW50aW5lIiwiTG9naXN0aXF1ZSI6IkFwcGxpY2F0aW9uIiwibmJmIjoxNzM0MzQ3MjEyLCJleHAiOjE3NjU4ODMyMTIsImlhdCI6MTczNDM0NzIxMiwiaXNzIjoieW91dENvbXBhbnlJc3N1ZXIuY29tIiwiYXVkIjoieW91dENvbXBhbnlJc3N1ZXIuY29tIn0.3jJnu2fs_QjrACjBa20_KJCVKIoTaxdnctxBlv6wzBQ
 
 
 

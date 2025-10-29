@@ -46,12 +46,17 @@ namespace MessagerieInterneAPI.Modules.Discussion
         }
 
         [HttpGet("getMesDiscussions")]
-        public async Task<IActionResult> GetMesDiscussions()
+        public async Task<IActionResult> GetMesDiscussions([FromQuery] int espace)
         {
             var idUtilisateurClaim = User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier);
             if (idUtilisateurClaim == null) return Unauthorized();
 
             int idUtilisateur = int.Parse(idUtilisateurClaim.Value);
+
+            var espaceActifClaim = User.Claims.FirstOrDefault(c => c.Type == "EspaceActif");
+            if (espaceActifClaim == null) return BadRequest("Espace actif non défini");
+            int espaceActif = int.Parse(espaceActifClaim.Value);
+
             Console.WriteLine("id ve hitany (disussion): " + idUtilisateur);
             var conn = connexion.ConnectPostgres();
             if (conn == null)
@@ -62,8 +67,8 @@ namespace MessagerieInterneAPI.Modules.Discussion
 
 
             var discussions = new List<DiscussionModel>();
-            discussions.AddRange(_service.GetGrpDiscussionByUser(idUtilisateur, conn));
-            discussions.AddRange(_service.GetDiscussionIndividuelleByUser(idUtilisateur, conn));
+            discussions.AddRange(_service.GetGrpDiscussionByUser(idUtilisateur, espace, conn));
+            discussions.AddRange(_service.GetDiscussionIndividuelleByUser(idUtilisateur, espace, conn));
 
             return Ok(discussions);
         }
@@ -76,6 +81,11 @@ namespace MessagerieInterneAPI.Modules.Discussion
 
             int idUtilisateur = int.Parse(idUtilisateurClaim.Value);
             Console.WriteLine("id ve hitany (message zone): " + idUtilisateur);
+
+            var espaceActifClaim = User.Claims.FirstOrDefault(c => c.Type == "EspaceActif");
+            if (espaceActifClaim == null) return BadRequest("Espace actif non défini");
+            int espaceActif = int.Parse(espaceActifClaim.Value);
+
 
             Console.WriteLine($"🔎 API /messages → targetId: {targetId}, type: {type}");
 
@@ -90,13 +100,18 @@ namespace MessagerieInterneAPI.Modules.Discussion
         }
 
         [HttpPost("demarrerDiscussion")]
-        public async Task<IActionResult> CreateNewDiscussion([FromBody] DiscussionModel model)
+        public async Task<IActionResult> CreateNewDiscussion([FromBody] DiscussionModel model, int espace)
         {
             var idUtilisateurClaim = User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier);
             if (idUtilisateurClaim == null) return Unauthorized();
             int idUtilisateur = int.Parse(idUtilisateurClaim.Value);
 
             Console.WriteLine("id ve hitany (demarrer discussion): " + idUtilisateur);
+
+            var espaceActifClaim = User.Claims.FirstOrDefault(c => c.Type == "EspaceActif");
+            if (espaceActifClaim == null) return BadRequest("Espace actif non défini");
+            int espaceActif = int.Parse(espaceActifClaim.Value);
+
             var conn = connexion.ConnectPostgres();
             if (conn == null)
             {
@@ -104,7 +119,7 @@ namespace MessagerieInterneAPI.Modules.Discussion
 
             }
 
-            var discussion = _service.VerifOuCreeDiscussionIndividuelle(conn, idUtilisateur, model);
+            var discussion = _service.VerifOuCreeDiscussionIndividuelle(conn, idUtilisateur, model, espace);
 
             return Ok(discussion);
         }
@@ -116,6 +131,11 @@ namespace MessagerieInterneAPI.Modules.Discussion
             if (idUtilisateurClaim == null) return Unauthorized();
 
             int idUtilisateur = int.Parse(idUtilisateurClaim.Value);
+
+            var espaceActifClaim = User.Claims.FirstOrDefault(c => c.Type == "EspaceActif");
+            if (espaceActifClaim == null) return BadRequest("Espace actif non défini");
+            int espaceActif = int.Parse(espaceActifClaim.Value);
+
             // Console.WriteLine("id ve hitany (message zone): " + idUtilisateur);
 
             var unreadCounts = await _service.GetUnreadCounts(idUtilisateur);
@@ -132,6 +152,11 @@ namespace MessagerieInterneAPI.Modules.Discussion
 
             int idUtilisateur = int.Parse(idUtilisateurClaim.Value);
             Console.WriteLine("id ve hitany (message zone): " + idUtilisateur);
+
+            var espaceActifClaim = User.Claims.FirstOrDefault(c => c.Type == "EspaceActif");
+            if (espaceActifClaim == null) return BadRequest("Espace actif non défini");
+            int espaceActif = int.Parse(espaceActifClaim.Value);
+
 
             await _service.MarkMessagesAsRead(idUtilisateur, discussionId, type);
 
@@ -153,6 +178,11 @@ namespace MessagerieInterneAPI.Modules.Discussion
 
             int idUtilisateur = int.Parse(idUtilisateurClaim.Value);
             Console.WriteLine("id ve hitany (search): " + idUtilisateur);
+
+            var espaceActifClaim = User.Claims.FirstOrDefault(c => c.Type == "EspaceActif");
+            if (espaceActifClaim == null) return BadRequest("Espace actif non défini");
+            int espaceActif = int.Parse(espaceActifClaim.Value);
+
 
             var results = _service.SearchUtilisateurEtGroupe(connexion.ConnectPostgres(), idUtilisateur, searchTerm);
             return Ok(results);

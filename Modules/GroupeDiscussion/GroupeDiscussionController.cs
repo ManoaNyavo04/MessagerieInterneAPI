@@ -30,6 +30,11 @@ namespace MessagerieInterneAPI
 
             int idUtilisateur = int.Parse(idUtilisateurClaim.Value);
             Console.WriteLine("id ve hitany: " + idUtilisateur);
+
+            var espaceActifClaim = User.Claims.FirstOrDefault(c => c.Type == "EspaceActif");
+            if (espaceActifClaim == null) return BadRequest("Espace actif non défini");
+            int espaceActif = int.Parse(espaceActifClaim.Value);
+
             var liaisonBase = connexion.ConnectPostgres();
             var mesGrp = _service.GetUtilisateurGrpDiscu(liaisonBase, idUtilisateur);
 
@@ -49,6 +54,11 @@ namespace MessagerieInterneAPI
             int idUtilisateur = int.Parse(idUtilisateurClaim.Value);
             Console.WriteLine("id ve hitany (groupe discussion): " + idUtilisateur);
 
+            var espaceActifClaim = User.Claims.FirstOrDefault(c => c.Type == "EspaceActif");
+            if (espaceActifClaim == null) return BadRequest("Espace actif non défini");
+            int espaceActif = int.Parse(espaceActifClaim.Value);
+
+
             await _service.CreerGroupe(connexion.ConnectPostgres(), dto, idUtilisateur);
             return Ok(new { message = "Groupe créé avec succès ", dto.Nom });
 
@@ -67,7 +77,8 @@ namespace MessagerieInterneAPI
         }
 
         [HttpPost("ajouterNouveauMembre")]
-        public async Task<IActionResult> AjouterNouveauMembre(int idGroupe, [FromBody] GroupeDiscussionDTO dto) {
+        public async Task<IActionResult> AjouterNouveauMembre(int idGroupe, [FromBody] GroupeDiscussionDTO dto)
+        {
             if (dto.Utilisateurs == null || !dto.Utilisateurs.Any())
             {
                 return BadRequest("Aucun membre à ajouter.");
