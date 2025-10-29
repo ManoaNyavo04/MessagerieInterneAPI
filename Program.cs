@@ -109,6 +109,7 @@ builder.Services.AddScoped<GroupeDiscussionService>();
 builder.Services.AddScoped<RoleService>();
 builder.Services.AddScoped<MessageService>();
 builder.Services.AddScoped<PieceJointService>();
+builder.Services.AddScoped<EspaceTravailService>();
 builder.Services.AddSignalR();
 
 builder.Services.AddSingleton<IUserIdProvider, MyCustomUserIdProvider>();

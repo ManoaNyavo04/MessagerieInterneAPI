@@ -89,3 +89,18 @@ CREATE or REPLACE VIEW v_piece_joint AS (
     join type_piece_joint tpj on tpj.id_type_piece_joint = pj.id_type_piece_joint
 );
 
+CREATE OR REPLACE VIEW v_utilisateur_espace_travail AS (
+    select 
+        u.id_utilisateur, 
+        u.matricule, 
+        u.nom, 
+        u.prenom, 
+        et.id_espace_travail, 
+        et.nom as espace_travail, 
+        et.id_pole 
+    from utilisateur_espace_travail uet 
+    join utilisateur u on u.id_utilisateur
+     = uet.id_utilisateur 
+    join espace_travail et on et.id_espace_travail = uet.id_espace_travail
+);
+

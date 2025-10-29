@@ -4,6 +4,7 @@ using MessagerieInterneAPI.Entite;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
 using BCrypt.Net;
+using Microsoft.AspNetCore.Identity;
 
 namespace MessagerieInterneAPI
 {
@@ -17,7 +18,7 @@ namespace MessagerieInterneAPI
             _context = context ?? throw new ArgumentNullException(nameof(context));
         }
 
-        public async Task<UtilisateurModel?> VerifUtilisateur(string matricule, string motDePasse)
+        /*public async Task<UtilisateurModel?> VerifUtilisateur(string matricule, string motDePasse)
         {
             var user = await _context.Utilisateur
                 .FirstOrDefaultAsync(u => u.Matricule == matricule);
@@ -27,6 +28,35 @@ namespace MessagerieInterneAPI
                 .Utilisateur
                 .FromSqlRaw("SELECT * FROM utilisateur WHERE matricule = {0} AND mdp = crypt({1}, mdp)", matricule, motDePasse)
                 .AnyAsync();
+
+            return isValid ? user : null;
+        }*/
+
+        public async Task<UtilisateurModel?> VerifUtilisateur(string matricule, string motDePasse)
+        {
+            var user = await _context.Utilisateur.FirstOrDefaultAsync(u => u.Matricule == matricule);
+            if (user == null) return null;
+
+            bool isValid = false;
+
+            // 🔍 Détecter le type de hash
+            if (user.Mdp.StartsWith("$2a$") || user.Mdp.StartsWith("$2b$") || user.Mdp.StartsWith("$2y$"))
+            {
+                // 🧩 Cas des anciens mots de passe PostgreSQL bcrypt
+                isValid = BCrypt.Net.BCrypt.Verify(motDePasse, user.Mdp);
+            }
+            else if (user.Mdp.StartsWith("AQAAAA"))
+            {
+                // 🧩 Cas des nouveaux mots de passe ASP.NET Identity
+                var passwordHasher = new PasswordHasher<UtilisateurModel>();
+                var result = passwordHasher.VerifyHashedPassword(user, user.Mdp, motDePasse);
+                isValid = result == PasswordVerificationResult.Success;
+            }
+            else
+            {
+                // 🧩 Cas d'un mot de passe en clair (au cas où)
+                isValid = user.Mdp == motDePasse;
+            }
 
             return isValid ? user : null;
         }
@@ -146,10 +176,19 @@ namespace MessagerieInterneAPI
             return allUtilisateurs;
         }
 
-        public List<UtilisateurModel> SearchUtilisateur(NpgsqlConnection liasonBase, string searchTerm)
+        public List<UtilisateurModel> SearchUtilisateur(NpgsqlConnection liasonBase, string searchTerm, int? idEspaceTravail)
         {
             List<UtilisateurModel> results = new List<UtilisateurModel>();
-            string sql = "SELECT * FROM v_info_utilisateur WHERE LOWER(nom) LIKE LOWER(@searchTerm) OR LOWER(prenom) LIKE LOWER(@searchTerm) OR LOWER(matricule) LIKE LOWER(@searchTerm)";
+            string sql = @"
+        SELECT * 
+        FROM v_utilisateur_espace_travail
+        WHERE id_espace_travail = @idEspaceTravail
+          AND (
+              LOWER(nom) LIKE LOWER(@searchTerm)
+              OR LOWER(prenom) LIKE LOWER(@searchTerm)
+              OR LOWER(matricule) LIKE LOWER(@searchTerm)
+          );
+    ";
 
             if (liasonBase == null || liasonBase.State == ConnectionState.Closed)
             {
@@ -160,37 +199,40 @@ namespace MessagerieInterneAPI
 
             try
             {
-                NpgsqlCommand cmd = new NpgsqlCommand(sql, liasonBase);
-                cmd.Parameters.AddWithValue("@searchTerm", "%" + searchTerm + "%");
-
-                NpgsqlDataReader reader = cmd.ExecuteReader();
-                while (reader.Read())
+                using (var cmd = new NpgsqlCommand(sql, liasonBase))
                 {
-                    UtilisateurModel user = new UtilisateurModel();
-                    user.Id_utilisateur = (reader.GetInt32(0));
-                    user.Nom = (reader.GetString(1));
-                    user.Prenom = (reader.GetString(2));
-                    user.Matricule = (reader.GetString(3));
-                    user.Mdp = (reader.GetString(4));
-                    user.Id_role = (reader.GetInt32(5));
-                    user.Role = (reader.GetString(6));
+                    cmd.Parameters.AddWithValue("@searchTerm", "%" + searchTerm + "%");
+                    cmd.Parameters.AddWithValue("@idEspaceTravail", idEspaceTravail ?? (object)DBNull.Value);
 
-                    results.Add(user);
+                    using (var reader = cmd.ExecuteReader())
+                    {
+                        while (reader.Read())
+                        {
+                            var user = new UtilisateurModel
+                            {
+                                Id_utilisateur = reader.GetInt32(reader.GetOrdinal("id_utilisateur")),
+                                Matricule = reader.GetString(reader.GetOrdinal("matricule")),
+                                Nom = reader.GetString(reader.GetOrdinal("nom")),
+                                Prenom = reader.GetString(reader.GetOrdinal("prenom")),
+                                // Si ta vue ne contient pas Mdp, Role, etc., ne les lis pas
+                            };
+
+                            results.Add(user);
+                        }
+                    }
                 }
             }
             catch (Exception e)
             {
-                Console.WriteLine(e.Message);
+                Console.WriteLine("Erreur SQL : " + e.Message);
             }
             finally
             {
-                if (liasonBase != null)
-                {
-                    liasonBase.Close();
-                }
+                liasonBase?.Close();
             }
 
             return results;
         }
+
     }
 }
