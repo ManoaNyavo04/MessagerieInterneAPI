@@ -11,13 +11,18 @@ namespace MessagerieInterneAPI
     public class EspaceTravailController : ControllerBase
     {
         private readonly AppDbContext _context;
+        private readonly IConfiguration _config;
         private readonly EspaceTravailService _service;
+        private readonly UtilisateurService _utilisateurService;
         private readonly Connexion _connexion;
 
-        public EspaceTravailController(AppDbContext context)
+        public EspaceTravailController(AppDbContext context, IConfiguration config)
         {
             _context = context;
+            _config = config;
+            _context = context;
             _service = new EspaceTravailService(_context);
+            _utilisateurService = new UtilisateurService(_context);
             _connexion = new Connexion();
         }
 
@@ -54,6 +59,52 @@ namespace MessagerieInterneAPI
                 nomEspace = nomEspaceClaim
             });
         }
+
+        [HttpPost("changerEspace")]
+        public IActionResult ChangerEspace([FromBody] int nouvelEspace)
+        {
+            var idUtilisateurClaim = User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier);
+            if (idUtilisateurClaim == null) return Unauthorized();
+
+            int idUtilisateur = int.Parse(idUtilisateurClaim.Value);
+
+            // ⚙️ Récupère l'utilisateur depuis la base
+            var utilisateur = _utilisateurService.GetUtilisateurId(idUtilisateur).Result;
+            if (utilisateur == null) return NotFound();
+
+            var nouvelEspaceTravail = _service.GetEspacesTravailIdAsync(nouvelEspace).Result;
+            if (nouvelEspaceTravail == null) return NotFound();
+
+            var espace = _service.GetEspacesByUtilisateurIdAsync(idUtilisateur);
+            if (espace == null) return NotFound();
+
+            // 🧠 Génère un nouveau token avec le nouvel espace
+            var token = new LoginRequest().GenererToken(utilisateur, _config, nouvelEspaceTravail.Id_espace_travail, nouvelEspaceTravail.Nom);
+            var profilUtilisateur = _utilisateurService.GetProfilUtilisateur(utilisateur);
+
+            return Ok(new { token, profilUtilisateur });
+        }
+
+        [HttpPost("affecterUtilisateurVersEspaceTravail")]
+        public async Task<IActionResult> AffecterUtilisateurVersEspaceTravail([FromBody] UtilisateurEspaceTravailModel model)
+        {
+            if (model == null)
+                return BadRequest("Données invalides");
+            var result = await _service.AffecterUtilisateurVersEspaceTravail(model);
+            if (result == null)
+            {
+                return BadRequest("L'utilisateur est déjà affecté à cet espace de travail.");
+            }
+            return Ok(new { message = "Affectation réussie", result });
+        }
+
+        [HttpGet("getAllEspaceTravail")]
+        public async Task<IActionResult> GetAllEspaceTravail()
+        {
+            var espaces = await _service.GetAllEspaceTravail();
+            return Ok(espaces);
+        }
+
 
     }
 }

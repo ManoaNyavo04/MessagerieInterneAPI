@@ -55,11 +55,11 @@ namespace MessagerieInterneAPI
         public string GenererToken(UtilisateurModel utilisateur, IConfiguration _config, int? idEspaceTravail, string? nomEspaceTravail)
         {
             var claims = new List<Claim>
-    {
-        new Claim(ClaimTypes.NameIdentifier, utilisateur.Id_utilisateur.ToString()),
-        new Claim(ClaimTypes.Email, utilisateur.Matricule),
-        new Claim(ClaimTypes.Role, utilisateur.Id_role.ToString())
-    };
+        {
+            new Claim(ClaimTypes.NameIdentifier, utilisateur.Id_utilisateur.ToString()),
+            new Claim(ClaimTypes.Email, utilisateur.Matricule),
+            new Claim(ClaimTypes.Role, utilisateur.Id_role.ToString())
+        };
 
             if (idEspaceTravail.HasValue)
                 claims.Add(new Claim("EspaceActifId", idEspaceTravail.Value.ToString()));

@@ -26,6 +26,8 @@ namespace MessagerieInterneAPI.Data
             base.OnModelCreating(modelBuilder);
 
             modelBuilder.Entity<UtilisateurGroupeDiscussionModel>().HasNoKey().ToView("v_utilisateur_groupe_discussion");
+            // modelBuilder.Entity<UtilisateurEspaceTravailView>().HasNoKey().ToView("v_utilisateur_espace_travail");
+            modelBuilder.Entity<UtilisateurEspaceTravailView>().HasKey(u => new { u.IdUtilisateur, u.IdEspaceTravail }); // ✅ Clé composite
         }
 
     }

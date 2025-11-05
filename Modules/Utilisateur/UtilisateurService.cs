@@ -180,15 +180,15 @@ namespace MessagerieInterneAPI
         {
             List<UtilisateurModel> results = new List<UtilisateurModel>();
             string sql = @"
-        SELECT * 
-        FROM v_utilisateur_espace_travail
-        WHERE id_espace_travail = @idEspaceTravail
-          AND (
-              LOWER(nom) LIKE LOWER(@searchTerm)
-              OR LOWER(prenom) LIKE LOWER(@searchTerm)
-              OR LOWER(matricule) LIKE LOWER(@searchTerm)
-          );
-    ";
+                SELECT * 
+                FROM v_utilisateur_espace_travail
+                WHERE id_espace_travail = @idEspaceTravail
+                AND (
+                    LOWER(nom) LIKE LOWER(@searchTerm)
+                    OR LOWER(prenom) LIKE LOWER(@searchTerm)
+                    OR LOWER(matricule) LIKE LOWER(@searchTerm)
+                );
+            ";
 
             if (liasonBase == null || liasonBase.State == ConnectionState.Closed)
             {
@@ -201,9 +201,8 @@ namespace MessagerieInterneAPI
             {
                 using (var cmd = new NpgsqlCommand(sql, liasonBase))
                 {
-                    cmd.Parameters.AddWithValue("@searchTerm", "%" + searchTerm + "%");
                     cmd.Parameters.AddWithValue("@idEspaceTravail", idEspaceTravail ?? (object)DBNull.Value);
-
+                    cmd.Parameters.AddWithValue("@searchTerm", "%" + searchTerm + "%");
                     using (var reader = cmd.ExecuteReader())
                     {
                         while (reader.Read())
@@ -232,6 +231,13 @@ namespace MessagerieInterneAPI
             }
 
             return results;
+        }
+
+        public async Task<UtilisateurModel> GetUtilisateurId(int idUtilisateur)
+        {
+            return await _context.Utilisateur
+                .Where(u => u.Id_utilisateur == idUtilisateur)
+                .FirstOrDefaultAsync();
         }
 
     }

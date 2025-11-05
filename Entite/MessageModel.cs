@@ -32,12 +32,14 @@ namespace MessagerieInterneAPI
         public string? Chemin { get; set; }
         [Column("nom_original")]
         public string? Nom_original { get; set; }
+        [Column("id_espace_travail")]
+        public int? Id_espace_travail { get; set; }
         public List<string> Liste_utilisateur_vu { get; set; }
 
 
         public MessageModel() { }
 
-        public MessageModel(int id_message, int id_expediteur, String nomExpediteur, int id_destinataire, int id_groupe_discussion, string contenu, DateTime date_envoi, int id_status_msg, int id_piece_jointe, string chemin,string nomOriginal, bool estLu, List<string> listeUtilisateurVu)
+        public MessageModel(int id_message, int id_expediteur, String nomExpediteur, int id_destinataire, int id_groupe_discussion, string contenu, DateTime date_envoi, int id_status_msg, int id_piece_jointe, string chemin,string nomOriginal, int? idEspaceTravail, bool estLu, List<string> listeUtilisateurVu)
         {
             Id_message = id_message;
             Id_expediteur = id_expediteur;
@@ -50,6 +52,7 @@ namespace MessagerieInterneAPI
             Id_piece_jointe = id_piece_jointe;
             Chemin = chemin;
             Nom_original = nomOriginal;
+            Id_espace_travail = idEspaceTravail;
             Est_lu = estLu;
             Liste_utilisateur_vu = listeUtilisateurVu;
         }

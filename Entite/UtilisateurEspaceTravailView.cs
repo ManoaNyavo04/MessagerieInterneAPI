@@ -6,7 +6,7 @@ namespace MessagerieInterneAPI
     [Table("v_utilisateur_espace_travail")]
     public class UtilisateurEspaceTravailView
     {
-        [Key]
+        // [Key]
         [Column("id_utilisateur")]
         public int IdUtilisateur { get; set; }
         [Column("matricule")]
@@ -16,6 +16,7 @@ namespace MessagerieInterneAPI
         [Column("prenom")]
         public string Prenom { get; set; }
         [Column("id_espace_travail")]
+        
         public int IdEspaceTravail { get; set; }
         [Column("espace_travail")]
         public string EspaceTravail { get; set; }

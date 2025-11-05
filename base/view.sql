@@ -22,6 +22,7 @@ CREATE OR REPLACE VIEW v_utilisateur_groupe_discussion AS (
         u.prenom, 
         ugd.est_admin,
         ugd.statuts,
+        gd.id_espace_travail,
         'groupe' AS type 
     from utilisateur_groupe_discussion ugd 
     join utilisateur u on u.id_utilisateur = ugd.id_utilisateur 
@@ -42,19 +43,20 @@ CREATE VIEW v_discussions_individuelles AS
         ON u.id_utilisateur = m.id_expediteur OR u.id_utilisateur = m.id_destinataire
     WHERE m.id_groupe_discussion IS NULL;
 
-CREATE VIEW v_discussions_individuelles AS
+CREATE OR REPLACE VIEW v_discussions_individuelles AS
     SELECT DISTINCT
         e.id_utilisateur AS id_expediteur,
         e.nom || ' ' || e.prenom AS nom_expediteur,
         d.id_utilisateur AS id_destinataire,
         d.nom || ' ' || d.prenom AS nom_destinataire,
         m.contenu,
-
+        m.id_espace_travail,  -- ✅ ajouter cette colonne
         'prive' AS type
     FROM message m
     JOIN utilisateur e ON e.id_utilisateur = m.id_expediteur
     JOIN utilisateur d ON d.id_utilisateur = m.id_destinataire
     WHERE m.id_groupe_discussion IS NULL;
+
 
 
 CREATE or REPLACE VIEW v_utilisateur_message AS (
@@ -69,7 +71,8 @@ CREATE or REPLACE VIEW v_utilisateur_message AS (
         m.id_status_msg,
         pj.id_piece_joint,
         pj.chemin,
-        pj.nom_original
+        pj.nom_original,
+        m.id_espace_travail
     from message m 
     join utilisateur u on u.id_utilisateur = m.id_expediteur 
     left join piece_joint pj on pj.id_message = m.id_message
@@ -103,4 +106,5 @@ CREATE OR REPLACE VIEW v_utilisateur_espace_travail AS (
      = uet.id_utilisateur 
     join espace_travail et on et.id_espace_travail = uet.id_espace_travail
 );
+
 

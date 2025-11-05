@@ -80,6 +80,13 @@ CREATE TABLE message (
     foreign key (id_groupe_discussion) references groupe_discussion(id_groupe_discussion),
     foreign key (id_status_msg) references statuts_message(id_status_msg)
 );
+ALTER TABLE message ADD COLUMN id_espace_travail INT;
+ALTER TABLE message
+ADD CONSTRAINT fk_message_espace
+FOREIGN KEY (id_espace_travail)
+REFERENCES espace_travail(id_espace_travail);
+
+
 
 CREATE TABLE type_piece_joint (
     id_type_piece_joint serial primary key,

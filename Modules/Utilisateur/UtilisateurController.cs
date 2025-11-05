@@ -75,12 +75,13 @@ namespace MessagerieInterneAPI.Modules.Utilisateur
             {
                 token,
                 profilUtilisateur,
-                espaceActif = new
-                {
-                    idEspaceTravail = idPremierEspace,
-                    nomEspaceTravail = nomPremierEspace
-                },
-                espacesDisponibles = espaces
+                // espaceActif = new
+                // {
+                //     idEspaceTravail = idPremierEspace,
+                //     nomEspaceTravail = nomPremierEspace
+                // },
+                // espacesDisponibles = espaces
+
             });
         }
 
@@ -110,6 +111,12 @@ namespace MessagerieInterneAPI.Modules.Utilisateur
         [HttpGet("searchUser")]
         public async Task<IActionResult> SearchUser([FromQuery] string searchTerm)
         {
+            Console.WriteLine("Claims reçues :");
+            foreach (var c in User.Claims)
+            {
+                Console.WriteLine($"Type = {c.Type}  |  Value = {c.Value}");
+            }
+            
             var idEspaceClaim = User.Claims.FirstOrDefault(c => c.Type == "EspaceActifId")?.Value;
             var nomEspaceClaim = User.Claims.FirstOrDefault(c => c.Type == "EspaceActifNom")?.Value;
 
