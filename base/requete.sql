@@ -364,3 +364,12 @@ SELECT
                 (v.id_expediteur = 7 AND v.id_destinataire = 1)
              OR (v.id_expediteur = 1 AND v.id_destinataire = 7)
             ORDER BY v.id_message ASC;
+
+select 
+	et.id_espace_travail,
+	et.nom,
+	et.id_pole,
+	et.id_admin,
+	p.pole
+from espace_travail et 
+join pole p on p.id_pole = et.id_pole;

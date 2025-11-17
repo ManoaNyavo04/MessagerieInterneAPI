@@ -1,4 +1,5 @@
 using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
 using System.Text;
 using MessagerieInterneAPI;
 using MessagerieInterneAPI.Data;
@@ -30,7 +31,8 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
          ValidIssuer = jwtIssuer,
          ValidAudience = jwtIssuer,
          IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey)),
-         RoleClaimType = "Logistique"
+        //  RoleClaimType = "Logistique",
+         RoleClaimType = ClaimTypes.Role
      };
 
      // 👇 très important pour permettre l'authentification WebSocket
@@ -113,6 +115,7 @@ builder.Services.AddScoped<RoleService>();
 builder.Services.AddScoped<MessageService>();
 builder.Services.AddScoped<PieceJointService>();
 builder.Services.AddScoped<EspaceTravailService>();
+builder.Services.AddScoped<RoleService>();
 builder.Services.AddSignalR();
 
 builder.Services.AddSingleton<IUserIdProvider, MyCustomUserIdProvider>();

@@ -27,4 +27,5 @@ namespace MessagerieInterneAPI
             this.Id_admin = id_admin;
         }
     }
+    
 }

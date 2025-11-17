@@ -85,7 +85,8 @@ namespace MessagerieInterneAPI.Modules.Utilisateur
             });
         }
 
-
+        // [Authorize(Roles = "1")]
+        [Authorize(Roles = "m_1")]
         [HttpGet("allUsers")]
         public async Task<IActionResult> GetAllUtilisateurs()
         {
@@ -116,9 +117,10 @@ namespace MessagerieInterneAPI.Modules.Utilisateur
             {
                 Console.WriteLine($"Type = {c.Type}  |  Value = {c.Value}");
             }
-            
+
             var idEspaceClaim = User.Claims.FirstOrDefault(c => c.Type == "EspaceActifId")?.Value;
             var nomEspaceClaim = User.Claims.FirstOrDefault(c => c.Type == "EspaceActifNom")?.Value;
+
 
             if (idEspaceClaim == null)
                 return BadRequest("Aucun espace actif défini.");
@@ -128,6 +130,47 @@ namespace MessagerieInterneAPI.Modules.Utilisateur
             var connex = connect.ConnectPostgres();
             var result = _service.SearchUtilisateur(connex, searchTerm, int.Parse(idEspaceClaim));
             return Ok(result);
+        }
+
+        [Authorize]
+        [HttpGet("searchAllUser")]
+        public async Task<IActionResult> SearchAllUser([FromQuery] string searchTerm)
+        {
+            Console.WriteLine("Claims reçues :");
+            foreach (var c in User.Claims)
+            {
+                Console.WriteLine($"Type = {c.Type}  |  Value = {c.Value}");
+            }
+
+            var idEspaceClaim = User.Claims.FirstOrDefault(c => c.Type == "EspaceActifId")?.Value;
+            var nomEspaceClaim = User.Claims.FirstOrDefault(c => c.Type == "EspaceActifNom")?.Value;
+
+
+            if (idEspaceClaim == null)
+                return BadRequest("Aucun espace actif défini.");
+
+            Console.WriteLine("Espace Actif ID depuis le token : " + idEspaceClaim);
+            Connexion connect = new Connexion();
+            var connex = connect.ConnectPostgres();
+            var result = _service.SearchAllUtilisateur(connex, searchTerm);
+            return Ok(result);
+        }
+
+        [HttpGet("allUserApi")]
+        public async Task<IActionResult> GetUtilisateurApi()
+        {
+            var employes = await _service.GetAllEmployesApi();
+            return Ok(employes);
+        }
+
+        [HttpPost("rafraichir")]
+        public async Task<IActionResult> RafraichirUtilisateurs()
+        {
+            Connexion connect = new Connexion();
+            var connex = connect.ConnectPostgres();
+            await _service.SynchroniserUtilisateursAsync();
+            var utilisateurs = _service.GetAllUtilisateurs(connex); // <-- renvoyer la liste mise à jour
+            return Ok(utilisateurs);
         }
     }
 }

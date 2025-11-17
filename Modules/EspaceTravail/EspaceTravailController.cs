@@ -105,6 +105,50 @@ namespace MessagerieInterneAPI
             return Ok(espaces);
         }
 
+        [Authorize(Roles = "m_1")]
+        [HttpPost("creerEspaceTravail")]
+        public async Task<IActionResult> CreerEspaceTravail([FromBody] EspaceTravailDTO espaceTravail)
+        {
+            var idUtilisateurClaim = User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier);
+            if (idUtilisateurClaim == null) return Unauthorized();
+
+            int idUtilisateur = int.Parse(idUtilisateurClaim.Value);
+
+            var nouvelEspace = await _service.CreerEspaceTravailAsync(espaceTravail, idUtilisateur);
+            return Ok(new { message = "Espace de travail créé avec succès", nouvelEspace });
+        }
+
+        [Authorize]
+        [HttpPost("ajouterMembres")]
+        public async Task<IActionResult> AjouterMembres(int idEspace, [FromBody] List<int> nouveauxMembres)
+        {
+            await _service.AjouterNouveauxMembres(idEspace, nouveauxMembres);
+            return Ok(new { message = "Membres ajoutés avec succès." });
+
+        }
+
+        [Authorize]
+        [HttpGet("getMembreEspacesTravail")]
+        public async Task<IActionResult> GetMembreEspacesTravail()
+        {
+            var idEspaceClaim = User.Claims.FirstOrDefault(c => c.Type == "EspaceActifId")?.Value;
+            if (idEspaceClaim == null)
+                return BadRequest("Aucun espace actif défini.");
+
+            var membres = await _service.GetMembreEspacesTravail(int.Parse(idEspaceClaim));
+            return Ok(membres);
+        }
+
+        [Authorize(Roles = "m_1")]
+        [HttpGet("getAllPoleEspaceTravail")]
+        public async Task<IActionResult> GetAllPoleEspaceTravail()
+        {
+            
+            var poleEspaceTravail = await _service.GetAllPoleEspaceTravail();
+            return Ok(poleEspaceTravail);
+        }
+
+
 
     }
 }

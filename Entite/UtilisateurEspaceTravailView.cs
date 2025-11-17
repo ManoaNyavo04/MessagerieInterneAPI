@@ -21,7 +21,7 @@ namespace MessagerieInterneAPI
         [Column("espace_travail")]
         public string EspaceTravail { get; set; }
         [Column("id_pole")]
-        public int IdPole { get; set; }
+        public int? IdPole { get; set; }
 
         public UtilisateurEspaceTravailView() { }
         public UtilisateurEspaceTravailView(int idutilisateur, String matricule, String nom, String prenom, int idespace, String espace, int idpole)

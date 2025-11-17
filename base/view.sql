@@ -107,4 +107,15 @@ CREATE OR REPLACE VIEW v_utilisateur_espace_travail AS (
     join espace_travail et on et.id_espace_travail = uet.id_espace_travail
 );
 
+CREATE OR REPLACE VIEW v_pole_espace_travail AS (
+    select 
+        et.id_espace_travail,
+        et.nom,
+        et.id_pole,
+        et.id_admin,
+        p.pole
+    from espace_travail et 
+    join pole p on p.id_pole = et.id_pole
+);
+
 

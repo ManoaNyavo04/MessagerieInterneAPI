@@ -73,7 +73,7 @@ namespace MessagerieInterneAPI
             {
                 using var cmd = new NpgsqlCommand(sql, liaisonbase);
                 cmd.Parameters.AddWithValue("@nom", groupe.Nom);
-                cmd.Parameters.AddWithValue("@id_espace_travail", 1);
+                cmd.Parameters.AddWithValue("@id_espace_travail", groupe.Id_espace_travail);
                 cmd.Parameters.AddWithValue("@description", groupe.Description);
                 cmd.Parameters.AddWithValue("@id_createur", groupe.Id_createur);
 
@@ -147,7 +147,7 @@ namespace MessagerieInterneAPI
         }
 
 
-        public async Task CreerGroupe(NpgsqlConnection liaisonbase, GroupeDiscussionDTO dto, int currentUser)
+        public async Task CreerGroupe(NpgsqlConnection liaisonbase, GroupeDiscussionDTO dto, int currentUser, int idEspaceActif)
         {
             if (dto == null) throw new ArgumentNullException(nameof(dto));
 
@@ -155,7 +155,7 @@ namespace MessagerieInterneAPI
             var groupe = new GroupeDiscussionModel
             {
                 Nom = dto.Nom,
-                Id_espace_travail = 1,
+                Id_espace_travail = idEspaceActif,
                 Description = dto.Description,
                 Id_createur = currentUser
             };
@@ -249,6 +249,7 @@ namespace MessagerieInterneAPI
             catch (Exception e)
             {
                 Console.WriteLine(e.Message);
+                
             }
             finally
             {
