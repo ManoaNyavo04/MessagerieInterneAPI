@@ -37,6 +37,7 @@ CREATE TABLE espace_travail(
     foreign key (id_pole) references pole(id_pole),
     foreign key (id_admin) references utilisateur(id_utilisateur)
 );
+ALTER TABLE espace_travail ADD COLUMN deleted BOOLEAN DEFAULT FALSE;
 
 CREATE TABLE utilisateur_espace_travail(
     id_utilisateur_espace_travail serial primary key,

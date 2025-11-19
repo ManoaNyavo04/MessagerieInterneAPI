@@ -25,8 +25,9 @@ namespace MessagerieInterneAPI
         [Column("id_status_msg")]
         public int Id_status_msg { get; set; }
 
+        [NotMapped]
         public bool Est_lu { get; set; }
-        [Column("id_piece_jointe")]
+        [Column("id_piece_joint")]
         public int? Id_piece_jointe { get; set; }
         [Column("chemin")]
         public string? Chemin { get; set; }
@@ -34,6 +35,7 @@ namespace MessagerieInterneAPI
         public string? Nom_original { get; set; }
         [Column("id_espace_travail")]
         public int? Id_espace_travail { get; set; }
+        [NotMapped]
         public List<string> Liste_utilisateur_vu { get; set; }
 
 

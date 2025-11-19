@@ -54,13 +54,15 @@ namespace MessagerieInterneAPI
             if (dto.Fichier == null || dto.Fichier.Length == 0)
                 return BadRequest("Aucun fichier reçu");
 
-            var uploadsFolder = Path.Combine(Directory.GetCurrentDirectory(), "Uploads");
-            if (!Directory.Exists(uploadsFolder))
-                Directory.CreateDirectory(uploadsFolder);
 
             var nomOriginal = dto.Fichier.FileName;
 
-            var fileName = Guid.NewGuid() + Path.GetExtension(nomOriginal);
+            var uploadsFolder = Path.Combine(_env.WebRootPath, "Uploads");
+
+            if (!Directory.Exists(uploadsFolder))
+                Directory.CreateDirectory(uploadsFolder);
+
+            var fileName = Guid.NewGuid() + Path.GetExtension(dto.Fichier.FileName);
             var filePath = Path.Combine(uploadsFolder, fileName);
 
             using (var stream = new FileStream(filePath, FileMode.Create))
@@ -68,16 +70,17 @@ namespace MessagerieInterneAPI
                 await dto.Fichier.CopyToAsync(stream);
             }
 
+
             // Enregistrement dans la base
             await _pieceJointeService.AjouterPieceJointe(
                 connexion.ConnectPostgres(),
                 dto.IdMessage,
                 dto.IdType,
                 fileName,
-                nomOriginal 
+                nomOriginal
             );
 
-            return Ok(new { chemin = fileName,  nom = nomOriginal });
+            return Ok(new { chemin = fileName, nom = nomOriginal });
         }
 
 

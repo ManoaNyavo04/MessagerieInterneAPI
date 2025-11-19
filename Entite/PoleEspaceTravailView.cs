@@ -15,15 +15,18 @@ namespace MessagerieInterneAPI
         public int? IdAdmin { get; set; }
         [Column("pole")]
         public string Pole { get; set; }
+        [Column("deleted")]
+        public bool Deleted { get; set; }
 
         public PoleEspaceTravailView() { }
-        public PoleEspaceTravailView( int? idespacetravail, string nom, int? idpole, int? admin, string pole)
+        public PoleEspaceTravailView( int? idespacetravail, string nom, int? idpole, int? admin, string pole, bool deleted)
         {
             IdPole = idpole;
             Pole = pole;
             IdEspaceTravail = idespacetravail;
             Nom = nom;
             IdAdmin = admin;
+            Deleted = deleted;
         }
     }
 }

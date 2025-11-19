@@ -148,6 +148,15 @@ namespace MessagerieInterneAPI
             return Ok(poleEspaceTravail);
         }
 
+        [Authorize(Roles = "m_1")]
+        [HttpPut("supprimerEspaceTravail/{idEspace}")]
+        public async Task<IActionResult> SupprimerEspaceTravail(int idEspace)
+        {
+            await _service.SupprimerEspaceTravailAsync(idEspace);
+            return Ok(new { message = "Espace de travail supprimé avec succès." });
+        }
+
+
 
 
     }

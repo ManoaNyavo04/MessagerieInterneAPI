@@ -108,14 +108,15 @@ CREATE OR REPLACE VIEW v_utilisateur_espace_travail AS (
 );
 
 CREATE OR REPLACE VIEW v_pole_espace_travail AS (
-    select 
+    SELECT 
         et.id_espace_travail,
         et.nom,
-        et.id_pole,
+        et.id_pole::integer, 
         et.id_admin,
-        p.pole
-    from espace_travail et 
-    join pole p on p.id_pole = et.id_pole
+        p.pole,
+        et.deleted
+    FROM espace_travail et
+    JOIN pole p ON p.id_pole = et.id_pole
 );
 
 

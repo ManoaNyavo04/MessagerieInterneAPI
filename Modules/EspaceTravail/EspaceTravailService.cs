@@ -154,10 +154,25 @@ namespace MessagerieInterneAPI
 
         public async Task<List<PoleEspaceTravailView>> GetAllPoleEspaceTravail()
         {
-            return await _context.PoleEspaceTravailView.ToListAsync();
+            return await _context.PoleEspaceTravailView
+            .Where(p => !p.Deleted) 
+            .ToListAsync();
         }
 
+        public async Task<bool> SupprimerEspaceTravailAsync(int idEspace)
+        {
+            var espace = new EspaceTravailModel
+            {
+                Id_espace_travail = idEspace,
+                Deleted = true
+            };
 
+            _context.EspaceTravail.Attach(espace);
+
+            _context.Entry(espace).Property(e => e.Deleted).IsModified = true;
+            await _context.SaveChangesAsync();
+            return true;
+        }
 
 
 

@@ -1,3 +1,8 @@
+INSERT INTO utilisateur (id_utilisateur, nom, prenom, matricule, id_role, mdp) VALUES
+(0, 'Dev', 'Dev', 'Dev', 1, crypt('Dev2025', gen_salt('bf')));
+
+
+
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
 SET client_encoding = 'UTF8';
 
