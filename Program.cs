@@ -7,6 +7,7 @@ using MessagerieInterneAPI.Modules.Discussion;
 using MessagerieInterneAPI.Modules.Hubs;
 using MessagerieInterneAPI.Modules.Role;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.FileProviders;
@@ -116,13 +117,20 @@ builder.Services.AddScoped<MessageService>();
 builder.Services.AddScoped<PieceJointService>();
 builder.Services.AddScoped<EspaceTravailService>();
 builder.Services.AddScoped<RoleService>();
+builder.Services.AddScoped<ResetService>();
 builder.Services.AddSignalR();
 
 builder.Services.AddSingleton<IUserIdProvider, MyCustomUserIdProvider>();
 
 builder.Services.AddAuthorization();
 
+builder.Services.Configure<FormOptions>(options =>
+{
+    options.MultipartBodyLengthLimit = 30 * 1024 * 1024; // 30 Mo
+});
+
 var app = builder.Build();
+
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
@@ -171,13 +179,16 @@ app.UseStaticFiles(new StaticFileOptions
 });*/
 
 // Version dev + prod 
-var uploadsPath = Path.Combine(app.Environment.WebRootPath, "Uploads");
+// var uploadsPath = Path.Combine(app.Environment.WebRootPath, "Uploads");
+var uploadsPath = Path.Combine(Directory.GetCurrentDirectory(),"wwwroot", "Uploads");
 
 if (!Directory.Exists(uploadsPath))
     Directory.CreateDirectory(uploadsPath);
 
 app.UseStaticFiles(new StaticFileOptions
 {
+    ServeUnknownFileTypes = true, // ⚠️ IMPORTANT
+    DefaultContentType = "application/octet-stream",
     FileProvider = new PhysicalFileProvider(uploadsPath),
     RequestPath = "/Uploads"
 });

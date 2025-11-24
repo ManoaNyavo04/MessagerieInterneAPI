@@ -162,6 +162,7 @@ namespace MessagerieInterneAPI.Modules.Discussion
 
             var idEspaceClaim = User.Claims.FirstOrDefault(c => c.Type == "EspaceActifId")?.Value;
             var nomEspaceClaim = User.Claims.FirstOrDefault(c => c.Type == "EspaceActifNom")?.Value;
+            var role = User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.Role)?.Value;
 
             if (idEspaceClaim == null)
                 return BadRequest("Aucun espace actif défini.");
@@ -171,7 +172,7 @@ namespace MessagerieInterneAPI.Modules.Discussion
 
             Console.WriteLine($"Utilisateur : {idUtilisateur}, Espace actif : {idEspaceActif}");
 
-            var results = _service.SearchUtilisateurEtGroupe(connexion.ConnectPostgres(), idUtilisateur, searchTerm, idEspaceActif);
+            var results = _service.SearchUtilisateurEtGroupe(connexion.ConnectPostgres(), idUtilisateur, searchTerm, idEspaceActif, role);
             return Ok(results);
         }
 

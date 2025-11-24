@@ -1,5 +1,7 @@
 ﻿using System.Data;
 using MessagerieInterneAPI.Data;
+using MessagerieInterneAPI.Modules.Discussion;
+using Microsoft.EntityFrameworkCore;
 using Npgsql;
 
 namespace MessagerieInterneAPI
@@ -7,6 +9,15 @@ namespace MessagerieInterneAPI
     public class PieceJointService
     {
         private Connexion connexion = new Connexion();
+        private readonly AppDbContext _context;
+        private readonly IWebHostEnvironment _env;
+        private readonly MessageService _serviceMessage;
+        public PieceJointService(AppDbContext context, IWebHostEnvironment env)
+        {
+            _context = context;
+            _env = env;
+        }
+
         public async Task AjouterPieceJointe(NpgsqlConnection liaisonbase, int idMessage, int idType, string chemin, string nomOriginal)
         {
 
@@ -94,8 +105,38 @@ namespace MessagerieInterneAPI
             {
                 if (liaisonbase != null)
                     liaisonbase.Close();
-                    
+
             }
+        }
+
+        public async Task<string> UploadGeneric(PieceJointDTO dto, string nomOriginal, string dossier)
+        {
+            const long maxSize = 25 * 1024 * 1024; // 25 Mo
+
+            if (dto.Fichier.Length > maxSize)
+                throw new Exception("Le fichier dépasse la taille maximale autorisée de 25 Mo.");
+            var uploadsFolder = Path.Combine(_env.WebRootPath, dossier);
+
+            if (!Directory.Exists(uploadsFolder))
+                Directory.CreateDirectory(uploadsFolder);
+
+            var fileName = Guid.NewGuid() + Path.GetExtension(dto.Fichier.FileName);
+            var filePath = Path.Combine(uploadsFolder, fileName);
+
+            using (var stream = new FileStream(filePath, FileMode.Create))
+            {
+                await dto.Fichier.CopyToAsync(stream);
+            }
+
+            this.AjouterPieceJointe(
+                connexion.ConnectPostgres(),
+                dto.IdMessage,
+                dto.IdType,
+                fileName,
+                nomOriginal
+            );
+
+            return fileName;
         }
 
         public async Task<List<PieceJointModel>> GetPieceJointeParMessage(NpgsqlConnection liaisonbase, int idMessage)
@@ -147,6 +188,65 @@ namespace MessagerieInterneAPI
 
             return pieces;
         }
+
+        public async Task<PieceJointModel> GetPieceJointeAsyncId(int id)
+        {
+            return await _context.PieceJoint
+            .Where(p => p.Id_piece_jointe == id)
+            .FirstOrDefaultAsync();
+
+        }
+
+        public async Task<(byte[] bytes, string contentType, string fileName)> GetFileForDownload(int id)
+        {
+            var pj = await GetPieceJointeAsyncId(id);
+
+            if (pj == null || string.IsNullOrEmpty(pj.Chemin))
+                return (null, null, null);
+
+            string dossier = "Uploads";
+            string rootPath = _env.WebRootPath ?? Path.Combine(Directory.GetCurrentDirectory(), "wwwroot");
+
+            string filePath = Path.Combine(rootPath, dossier, pj.Chemin);
+
+            if (!File.Exists(filePath))
+                return (null, null, null);
+
+            var bytes = await File.ReadAllBytesAsync(filePath);
+            var contentType = GetContentType(filePath);
+
+            // 🔥 RÉCUPÉRER EXTENSION DU FICHIER RÉEL
+            string ext = Path.GetExtension(pj.Chemin);
+
+            // 🔥 SI nom_original n'a PAS d'extension → on l'ajoute automatiquement
+            string fileName = pj.Nom_original;
+
+            if (!fileName.EndsWith(ext, StringComparison.OrdinalIgnoreCase))
+                fileName += ext;  // ex: "rapport" → "rapport.lsp"
+
+            return (bytes, contentType, fileName);
+        }
+
+
+
+        private string GetContentType(string path)
+        {
+            var types = new Dictionary<string, string>
+        {
+            {".png", "image/png"},
+            {".jpg", "image/jpeg"},
+            {".jpeg", "image/jpeg"},
+            {".pdf", "application/pdf"},
+            {".docx", "application/vnd.openxmlformats-officedocument.wordprocessingml.document"},
+            {".xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"},
+            {".txt", "text/plain"}
+        };
+
+            var ext = Path.GetExtension(path).ToLowerInvariant();
+            return types.GetValueOrDefault(ext, "application/octet-stream");
+        }
+
+
 
 
     }

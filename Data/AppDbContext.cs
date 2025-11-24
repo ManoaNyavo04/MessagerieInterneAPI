@@ -21,6 +21,7 @@ namespace MessagerieInterneAPI.Data
         public DbSet<UtilisateurTableModel> UtilisateurTable { get; set; }
         public DbSet<UtilisateurEspaceTravailView> UtilisateurEspaceTravailView { get; set; }
         public DbSet<PoleEspaceTravailView> PoleEspaceTravailView { get; set; }
+        public DbSet<PieceJointModel> PieceJoint { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -30,6 +31,12 @@ namespace MessagerieInterneAPI.Data
             // modelBuilder.Entity<UtilisateurEspaceTravailView>().HasNoKey().ToView("v_utilisateur_espace_travail");
             modelBuilder.Entity<UtilisateurEspaceTravailView>().HasKey(u => new { u.IdUtilisateur, u.IdEspaceTravail }); // ✅ Clé composite
             modelBuilder.Entity<PoleEspaceTravailView>().HasKey(u => new { u.IdEspaceTravail, u.IdPole });
+            modelBuilder.Entity<PieceJointModel>()
+                .ToView("v_piece_joint")
+                .HasKey(p => p.Id_piece_jointe);
+
+
+
         }
 
     }

@@ -1,6 +1,14 @@
 INSERT INTO utilisateur (id_utilisateur, nom, prenom, matricule, id_role, mdp) VALUES
 (0, 'Dev', 'Dev', 'Dev', 1, crypt('Dev2025', gen_salt('bf')));
 
+INSERT INTO espace_travail (id_espace_travail, nom)
+VALUES (1, 'Espace Admin');
+
+INSERT INTO utilisateur_espace_travail (id_utilisateur, id_espace_travail)
+VALUES (0, 1);
+
+
+
 
 
 CREATE EXTENSION IF NOT EXISTS pgcrypto;

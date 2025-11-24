@@ -1,4 +1,5 @@
-﻿using MessagerieInterneAPI.Data;
+﻿using System.Net;
+using MessagerieInterneAPI.Data;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -47,6 +48,7 @@ namespace MessagerieInterneAPI
             return Ok(new { chemin });
         }*/
 
+        [Authorize]
         [HttpPost("upload")]
         [Consumes("multipart/form-data")]
         public async Task<IActionResult> UploadFile([FromForm] PieceJointDTO dto)
@@ -54,38 +56,37 @@ namespace MessagerieInterneAPI
             if (dto.Fichier == null || dto.Fichier.Length == 0)
                 return BadRequest("Aucun fichier reçu");
 
+            const long maxSize = 25 * 1024 * 1024; // 25 Mo
+            if (dto.Fichier.Length > maxSize)
+                return BadRequest("Le fichier dépasse la taille maximale autorisée de 25 Mo.");
 
             var nomOriginal = dto.Fichier.FileName;
-
-            var uploadsFolder = Path.Combine(_env.WebRootPath, "Uploads");
-
-            if (!Directory.Exists(uploadsFolder))
-                Directory.CreateDirectory(uploadsFolder);
-
-            var fileName = Guid.NewGuid() + Path.GetExtension(dto.Fichier.FileName);
-            var filePath = Path.Combine(uploadsFolder, fileName);
-
-            using (var stream = new FileStream(filePath, FileMode.Create))
-            {
-                await dto.Fichier.CopyToAsync(stream);
-            }
-
-
-            // Enregistrement dans la base
-            await _pieceJointeService.AjouterPieceJointe(
-                connexion.ConnectPostgres(),
-                dto.IdMessage,
-                dto.IdType,
-                fileName,
-                nomOriginal
-            );
+            string fileName = await _pieceJointeService.UploadGeneric(dto, nomOriginal, "Uploads");
 
             return Ok(new { chemin = fileName, nom = nomOriginal });
         }
 
+        /*public async Task<IActionResult> UploadProfile([FromForm] PieceJointDTO dto)
+        {
+            if (dto.Fichier == null || dto.Fichier.Length == 0)
+                return BadRequest("Aucun fichier reçu");
 
 
+            var nomOriginal = dto.Fichier.FileName;
+            string fileName = await _pieceJointeService.UploadGeneric(dto, nomOriginal, "profiles");
+
+            return Ok(new { chemin = fileName, nom = nomOriginal });
+        }*/
 
 
+        [Authorize]
+        [HttpGet("download/{id}")]
+        public async Task<IActionResult> DownloadFile(int id)
+        {
+            var (bytes, contentType, fileName) = await _pieceJointeService.GetFileForDownload(id);
+            if (bytes == null)
+                return NotFound("Fichier introuvable.");
+            return File(bytes, contentType, fileName);
+        }
     }
 }

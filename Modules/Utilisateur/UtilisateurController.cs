@@ -1,4 +1,5 @@
-﻿using MessagerieInterneAPI.Data;
+﻿using System.Security.Claims;
+using MessagerieInterneAPI.Data;
 using MessagerieInterneAPI.Entite;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -117,10 +118,13 @@ namespace MessagerieInterneAPI.Modules.Utilisateur
             {
                 Console.WriteLine($"Type = {c.Type}  |  Value = {c.Value}");
             }
+            var role = User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.Role)?.Value;
 
             var idEspaceClaim = User.Claims.FirstOrDefault(c => c.Type == "EspaceActifId")?.Value;
             var nomEspaceClaim = User.Claims.FirstOrDefault(c => c.Type == "EspaceActifNom")?.Value;
 
+            if (role != "m_1" && idEspaceClaim == null)
+                return BadRequest("Espace actif manquant pour utilisateur non-admin.");
 
             if (idEspaceClaim == null)
                 return BadRequest("Aucun espace actif défini.");
@@ -128,7 +132,13 @@ namespace MessagerieInterneAPI.Modules.Utilisateur
             Console.WriteLine("Espace Actif ID depuis le token : " + idEspaceClaim);
             Connexion connect = new Connexion();
             var connex = connect.ConnectPostgres();
-            var result = _service.SearchUtilisateur(connex, searchTerm, int.Parse(idEspaceClaim));
+            // var result = _service.SearchUtilisateur(connex, searchTerm, int.Parse(idEspaceClaim));
+            var result = _service.SearchDynamicUtilisateur(
+                connex,
+                searchTerm,
+                role == "m_1" ? null : int.Parse(idEspaceClaim), // admin → pas de filtre
+                role
+            );
             return Ok(result);
         }
 

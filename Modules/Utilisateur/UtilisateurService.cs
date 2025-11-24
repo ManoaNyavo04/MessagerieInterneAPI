@@ -272,6 +272,8 @@ namespace MessagerieInterneAPI
                     using (var reader = cmd.ExecuteReader())
                     {
                         while (reader.Read())
+
+
                         {
                             var user = new UtilisateurModel
                             {
@@ -298,6 +300,83 @@ namespace MessagerieInterneAPI
 
             return results;
         }
+
+        public List<UtilisateurModel> SearchDynamicUtilisateur(NpgsqlConnection liasonBase, string searchTerm, int? idEspaceTravail, string role)
+        {
+            List<UtilisateurModel> results = new List<UtilisateurModel>();
+            string sql;
+
+            if (role == "m_1")
+            {
+                // ADMIN → PAS DE FILTRE PAR ESPACE
+                sql = @"
+            SELECT * 
+            FROM v_info_utilisateur
+            WHERE (
+                LOWER(nom) LIKE LOWER(@searchTerm)
+                OR LOWER(prenom) LIKE LOWER(@searchTerm)
+                OR LOWER(matricule) LIKE LOWER(@searchTerm)
+            );
+        ";
+            }
+            else
+            {
+                // UTILISATEUR → FILTRE PAR ESPACE
+                sql = @"
+            SELECT * 
+            FROM v_utilisateur_espace_travail
+            WHERE id_espace_travail = @idEspaceTravail
+            AND (
+                LOWER(nom) LIKE LOWER(@searchTerm)
+                OR LOWER(prenom) LIKE LOWER(@searchTerm)
+                OR LOWER(matricule) LIKE LOWER(@searchTerm)
+            );
+        ";
+            }
+
+            if (liasonBase == null || liasonBase.State == ConnectionState.Closed)
+            {
+                Connexion connexion = new Connexion();
+                liasonBase = connexion.ConnectPostgres();
+                liasonBase.Open();
+            }
+
+            try
+            {
+                using (var cmd = new NpgsqlCommand(sql, liasonBase))
+                {
+                    cmd.Parameters.AddWithValue("@searchTerm", "%" + searchTerm + "%");
+
+                    if (role != "m_1") // seulement si utilisateur
+                        cmd.Parameters.AddWithValue("@idEspaceTravail", idEspaceTravail ?? (object)DBNull.Value);
+
+                    using (var reader = cmd.ExecuteReader())
+                    {
+                        while (reader.Read())
+                        {
+                            results.Add(new UtilisateurModel
+                            {
+                                Id_utilisateur = reader.GetInt32(reader.GetOrdinal("id_utilisateur")),
+                                Matricule = reader.GetString(reader.GetOrdinal("matricule")),
+                                Nom = reader.GetString(reader.GetOrdinal("nom")),
+                                Prenom = reader.GetString(reader.GetOrdinal("prenom")),
+                            });
+                        }
+                    }
+                }
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine("Erreur SQL : " + e.Message);
+            }
+            finally
+            {
+                liasonBase?.Close();
+            }
+
+            return results;
+        }
+
 
         public async Task<UtilisateurModel> GetUtilisateurId(int idUtilisateur)
         {
