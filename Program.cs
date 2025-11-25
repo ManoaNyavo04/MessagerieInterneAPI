@@ -143,7 +143,10 @@ if (app.Environment.IsDevelopment())
 app.UseRouting();
 
 app.UseCors("AllowLocalhost3000");
-app.Urls.Add("http://10.5.100.7:5040");
+// app.Urls.Add("http://10.5.100.7:5040");
+app.Urls.Add("http://*:5040");
+
+
 
 app.UseAuthentication();
 app.UseAuthorization();
