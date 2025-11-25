@@ -105,8 +105,8 @@ builder.Services.AddCors(options =>
             policy.WithOrigins("http://10.5.100.7:3004")
                   .AllowAnyHeader()
                   .AllowAnyMethod()
-                  .AllowCredentials()
-                  .SetIsOriginAllowed(_ => true);
+                  .AllowCredentials();
+                //   .SetIsOriginAllowed(_ => true);
         });
 });
 
