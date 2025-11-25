@@ -1,6 +1,7 @@
 ﻿using System.Security.Claims;
 using MessagerieInterneAPI.Data;
 using MessagerieInterneAPI.Entite;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.SignalR;
 
@@ -52,7 +53,10 @@ namespace MessagerieInterneAPI.Modules.Discussion
             if (idUtilisateurClaim == null) return Unauthorized();
 
             int idUtilisateur = int.Parse(idUtilisateurClaim.Value);
+
             Console.WriteLine("id ve hitany (disussion): " + idUtilisateur);
+            var espaceClaim = User.Claims.FirstOrDefault(c => c.Type == "EspaceActifId")?.Value;
+            var idEspaceActif = espaceClaim != null ? int.Parse(espaceClaim) : 0;
             var conn = connexion.ConnectPostgres();
             if (conn == null)
             {
@@ -62,12 +66,13 @@ namespace MessagerieInterneAPI.Modules.Discussion
 
 
             var discussions = new List<DiscussionModel>();
-            discussions.AddRange(_service.GetGrpDiscussionByUser(idUtilisateur, conn));
-            discussions.AddRange(_service.GetDiscussionIndividuelleByUser(idUtilisateur, conn));
+            discussions.AddRange(_service.GetGrpDiscussionByUser(idUtilisateur,idEspaceActif, conn));
+            discussions.AddRange(_service.GetDiscussionIndividuelleByUser(idUtilisateur, idEspaceActif, conn));
 
             return Ok(discussions);
         }
 
+        [Authorize]
         [HttpGet("messages")]
         public async Task<IActionResult> GetMessages(int targetId, string type)
         {
@@ -97,6 +102,9 @@ namespace MessagerieInterneAPI.Modules.Discussion
             int idUtilisateur = int.Parse(idUtilisateurClaim.Value);
 
             Console.WriteLine("id ve hitany (demarrer discussion): " + idUtilisateur);
+
+            var espaceClaim = User.Claims.FirstOrDefault(c => c.Type == "EspaceActifId")?.Value;
+            var idEspaceActif = espaceClaim != null ? int.Parse(espaceClaim) : 0;
             var conn = connexion.ConnectPostgres();
             if (conn == null)
             {
@@ -104,7 +112,7 @@ namespace MessagerieInterneAPI.Modules.Discussion
 
             }
 
-            var discussion = _service.VerifOuCreeDiscussionIndividuelle(conn, idUtilisateur, model);
+            var discussion = _service.VerifOuCreeDiscussionIndividuelle(conn, idEspaceActif, idUtilisateur, model);
 
             return Ok(discussion);
         }
@@ -145,18 +153,29 @@ namespace MessagerieInterneAPI.Modules.Discussion
             return Ok();
         }
 
+        [Authorize]
         [HttpGet("searchUserGroup")]
         public async Task<IActionResult> SearchUtilisateurEtGroupe([FromQuery] string searchTerm)
         {
-            var idUtilisateurClaim = User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier);
+            var idUtilisateurClaim = User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier)?.Value;
             if (idUtilisateurClaim == null) return Unauthorized();
 
-            int idUtilisateur = int.Parse(idUtilisateurClaim.Value);
-            Console.WriteLine("id ve hitany (search): " + idUtilisateur);
+            var idEspaceClaim = User.Claims.FirstOrDefault(c => c.Type == "EspaceActifId")?.Value;
+            var nomEspaceClaim = User.Claims.FirstOrDefault(c => c.Type == "EspaceActifNom")?.Value;
+            var role = User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.Role)?.Value;
 
-            var results = _service.SearchUtilisateurEtGroupe(connexion.ConnectPostgres(), idUtilisateur, searchTerm);
+            if (idEspaceClaim == null)
+                return BadRequest("Aucun espace actif défini.");
+
+            int idUtilisateur = int.Parse(idUtilisateurClaim);
+            int idEspaceActif = int.Parse(idEspaceClaim);
+
+            Console.WriteLine($"Utilisateur : {idUtilisateur}, Espace actif : {idEspaceActif}");
+
+            var results = _service.SearchUtilisateurEtGroupe(connexion.ConnectPostgres(), idUtilisateur, searchTerm, idEspaceActif, role);
             return Ok(results);
         }
+
     }
 }
 

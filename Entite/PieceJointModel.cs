@@ -3,11 +3,10 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace MessagerieInterneAPI
 {
-    [Table("v_piece_joint")]
     public class PieceJointModel
     {
         [Key]
-        [Column("id_piece_jointe")]
+        [Column("id_piece_joint")]
         public int Id_piece_jointe { get; set; }
         [Column("id_message")]
         public int Id_message { get; set; }

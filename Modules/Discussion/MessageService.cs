@@ -95,18 +95,19 @@ namespace MessagerieInterneAPI.Modules.Discussion
                     Id_piece_jointe = reader.IsDBNull(8) ? 0 : reader.GetInt32(8),
                     Chemin = reader.IsDBNull(9) ? null : reader.GetString(9),
                     Nom_original = reader.IsDBNull(10) ? null : reader.GetString(10),
-                    Est_lu = reader.GetBoolean(11)
+                    Id_espace_travail = reader.IsDBNull(11) ? null : reader.GetInt32(11),
+                    Est_lu = reader.GetBoolean(12)
                 };
 
                 if (type == "groupe")
                 {
                     // Index 12 existe uniquement pour les groupes
-                    msg.Liste_utilisateur_vu = !reader.IsDBNull(12)
-                    ? reader.GetFieldValue<string[]>(12).ToList()
+                    msg.Liste_utilisateur_vu = !reader.IsDBNull(13)
+                    ? reader.GetFieldValue<string[]>(13).ToList()
                     : new List<string>();
 
                 }
-                
+
 
                 messages.Add(msg);
             }
@@ -114,6 +115,7 @@ namespace MessagerieInterneAPI.Modules.Discussion
 
             return messages;
         }
+
 
 
 
@@ -240,13 +242,14 @@ namespace MessagerieInterneAPI.Modules.Discussion
         public async Task<MessageModel> SendMessage(MessageModel message)
         {
             const string sql = @"
-            INSERT INTO message (
-                id_expediteur, id_destinataire, id_groupe_discussion, contenu, date_envoie, id_status_msg
-            )
-            VALUES (
-                @id_expediteur, @id_destinataire, @id_groupe_discussion, @contenu, @date_envoie, @id_status_msg
-            )
-            RETURNING id_message";  // 🔴 Ajout RETURNING
+                INSERT INTO message (
+                    id_expediteur, id_destinataire, id_groupe_discussion, contenu, date_envoie, id_status_msg, id_espace_travail
+                )
+                VALUES (
+                    @id_expediteur, @id_destinataire, @id_groupe_discussion, @contenu, @date_envoie, @id_status_msg, @id_espace_travail
+                )
+                RETURNING id_message";  // 🔴 Ajout RETURNING
+
 
             using var liasonBase = new Connexion().ConnectPostgres();
             liasonBase.Open();
@@ -258,6 +261,7 @@ namespace MessagerieInterneAPI.Modules.Discussion
             cmd.Parameters.AddWithValue("@contenu", message.Contenu);
             cmd.Parameters.AddWithValue("@date_envoie", message.Date_envoie);
             cmd.Parameters.AddWithValue("@id_status_msg", message.Id_status_msg);
+            cmd.Parameters.AddWithValue("@id_espace_travail", message.Id_espace_travail.HasValue ? (object)message.Id_espace_travail.Value : DBNull.Value);
 
             // 🔽 Lire l'ID inséré
             var id = await cmd.ExecuteScalarAsync();
@@ -341,10 +345,14 @@ namespace MessagerieInterneAPI.Modules.Discussion
 
         }*/
 
-        public List<DiscussionModel> GetGrpDiscussionByUser(int userId, NpgsqlConnection liasonBase)
+        public List<DiscussionModel> GetGrpDiscussionByUser(int userId, int idEspaceTravail, NpgsqlConnection liasonBase)
         {
             List<DiscussionModel> discussions = new List<DiscussionModel>();
-            String sql = "SELECT id_groupe_discussion, groupe, 'groupe' AS type FROM v_utilisateur_groupe_discussion WHERE id_utilisateur = @userId";
+            string sql = @"
+                SELECT id_groupe_discussion, groupe, 'groupe' AS type, id_espace_travail
+                FROM v_utilisateur_groupe_discussion
+                WHERE id_utilisateur = @userId
+                AND id_espace_travail = @idEspaceTravail"; // ✅ filtre ajouté
 
             if (liasonBase == null || liasonBase.State == ConnectionState.Closed)
             {
@@ -357,6 +365,7 @@ namespace MessagerieInterneAPI.Modules.Discussion
             {
                 NpgsqlCommand cmd = new NpgsqlCommand(sql, liasonBase);
                 cmd.Parameters.AddWithValue("@userId", userId);
+                cmd.Parameters.AddWithValue("@idEspaceTravail", idEspaceTravail);
                 NpgsqlDataReader reader = cmd.ExecuteReader();
 
                 while (reader.Read())
@@ -386,24 +395,38 @@ namespace MessagerieInterneAPI.Modules.Discussion
         }
 
 
-        public List<DiscussionModel> GetDiscussionIndividuelleByUser(int userId, NpgsqlConnection liasonBase)
+        public List<DiscussionModel> GetDiscussionIndividuelleByUser(int userId, int idEspaceTravail, NpgsqlConnection liasonBase)
         {
             List<DiscussionModel> discussions = new List<DiscussionModel>();
-            String sql = @"SELECT 
+            string sql = @"
+                SELECT 
                     CASE 
                         WHEN id_expediteur = @userId THEN id_destinataire
                         ELSE id_expediteur
                     END AS id_autre_utilisateur,
-                    
+
                     CASE 
                         WHEN id_expediteur = @userId THEN nom_destinataire
                         ELSE nom_expediteur
                     END AS nom_autre_utilisateur,
-                    
-                    'prive' AS type
+
+                    'prive' AS type,
+                    id_espace_travail
                 FROM v_discussions_individuelles
-                WHERE id_expediteur = @userId OR id_destinataire = @userId
-                GROUP BY id_autre_utilisateur, nom_autre_utilisateur";
+                WHERE (id_expediteur = @userId OR id_destinataire = @userId)
+                AND id_espace_travail = @idEspaceTravail
+                GROUP BY 
+                    CASE 
+                        WHEN id_expediteur = @userId THEN id_destinataire
+                        ELSE id_expediteur
+                    END,
+                    CASE 
+                        WHEN id_expediteur = @userId THEN nom_destinataire
+                        ELSE nom_expediteur
+                    END,
+                    id_espace_travail";
+
+
 
             Console.WriteLine("SQL Query: " + sql);
             if (liasonBase == null || liasonBase.State == ConnectionState.Closed)
@@ -417,6 +440,7 @@ namespace MessagerieInterneAPI.Modules.Discussion
             {
                 NpgsqlCommand cmd = new NpgsqlCommand(sql, liasonBase);
                 cmd.Parameters.AddWithValue("@userId", userId);
+                cmd.Parameters.AddWithValue("@idEspaceTravail", idEspaceTravail);
                 NpgsqlDataReader reader = cmd.ExecuteReader();
 
                 while (reader.Read())
@@ -526,7 +550,7 @@ namespace MessagerieInterneAPI.Modules.Discussion
             return discussions;
         }
 
-        public async Task<DiscussionModel> VerifOuCreeDiscussionIndividuelle(NpgsqlConnection connexion,
+        public async Task<DiscussionModel> VerifOuCreeDiscussionIndividuelle(NpgsqlConnection connexion, int espaceActifId,
             int idExpediteur, DiscussionModel discussion)
         {
 
@@ -538,7 +562,7 @@ namespace MessagerieInterneAPI.Modules.Discussion
             {
 
                 Console.WriteLine("✅ Discussion trouvée, récupération des messages...");
-                var messages = GetDiscussionIndividuelleByUser(idExpediteur, connexion);
+                var messages = GetDiscussionIndividuelleByUser(idExpediteur, espaceActifId, connexion);
                 return messages.FirstOrDefault();
             }
             else
@@ -550,7 +574,7 @@ namespace MessagerieInterneAPI.Modules.Discussion
 
                 return discuss;
             }
-            
+
         }
 
         public async Task<List<ComptageMsgNonLuDTO>> GetUnreadCounts(int idUser)
@@ -792,7 +816,7 @@ namespace MessagerieInterneAPI.Modules.Discussion
         }
 
 
-        public List<DiscussionModel> SearchUtilisateurEtGroupe(NpgsqlConnection liasonBase, int idUtilisateur, string searchTerm)
+        /*public List<DiscussionModel> SearchUtilisateurEtGroupe(NpgsqlConnection liasonBase, int idUtilisateur, string searchTerm)
         {
             List<DiscussionModel> results = new List<DiscussionModel>();
 
@@ -871,6 +895,249 @@ namespace MessagerieInterneAPI.Modules.Discussion
             }
 
             return results;
+        }*/
+
+        // tsy misy recherche ho an'ny admin
+        /*public List<DiscussionModel> SearchUtilisateurEtGroupe(NpgsqlConnection liasonBase, int idUtilisateur, string searchTerm, int idEspaceActif)
+        {
+            List<DiscussionModel> results = new List<DiscussionModel>();
+
+            if (liasonBase == null || liasonBase.State == ConnectionState.Closed)
+            {
+                Connexion connexion = new Connexion();
+                liasonBase = connexion.ConnectPostgres();
+                liasonBase.Open();
+            }
+
+            try
+            {
+                // 🔎 Requête utilisateurs appartenant au même espace
+                string sqlUtilisateurs = @"
+            SELECT DISTINCT u.id_utilisateur AS id, CONCAT(u.prenom, ' ', u.nom) AS nom, 'utilisateur' AS type
+            FROM utilisateur u
+            JOIN utilisateur_espace_travail uet ON u.id_utilisateur = uet.id_utilisateur
+            WHERE uet.id_espace_travail = @idEspaceActif
+              AND (LOWER(u.nom) LIKE LOWER(@searchTerm)
+                   OR LOWER(u.prenom) LIKE LOWER(@searchTerm)
+                   OR LOWER(u.matricule) LIKE LOWER(@searchTerm))
+              AND u.id_utilisateur <> @idUtilisateur
+            ORDER BY nom ASC";
+
+                using (var cmd = new NpgsqlCommand(sqlUtilisateurs, liasonBase))
+                {
+                    cmd.Parameters.AddWithValue("@searchTerm", "%" + searchTerm + "%");
+                    cmd.Parameters.AddWithValue("@idEspaceActif", idEspaceActif);
+                    cmd.Parameters.AddWithValue("@idUtilisateur", idUtilisateur);
+
+                    using (var reader = cmd.ExecuteReader())
+                    {
+                        while (reader.Read())
+                        {
+                            results.Add(new DiscussionModel
+                            {
+                                Id = reader.GetInt32(0),
+                                Nom = reader.GetString(1),
+                                Type = reader.GetString(2)
+                            });
+                        }
+                    }
+                }
+
+                // 🔎 Requête groupes appartenant au même espace
+                string sqlGroupes = @"
+            SELECT g.id_groupe_discussion AS id, g.nom, 'groupe' AS type
+            FROM groupe_discussion g
+            JOIN utilisateur_groupe_discussion ug ON ug.id_groupe_discussion = g.id_groupe_discussion
+            WHERE g.id_espace_travail = @idEspaceActif
+              AND ug.id_utilisateur = @idUtilisateur
+              AND LOWER(g.nom) LIKE LOWER(@searchTerm)
+            ORDER BY g.nom ASC";
+
+                using (var cmd = new NpgsqlCommand(sqlGroupes, liasonBase))
+                {
+                    cmd.Parameters.AddWithValue("@searchTerm", "%" + searchTerm + "%");
+                    cmd.Parameters.AddWithValue("@idUtilisateur", idUtilisateur);
+                    cmd.Parameters.AddWithValue("@idEspaceActif", idEspaceActif);
+
+                    using (var reader = cmd.ExecuteReader())
+                    {
+                        while (reader.Read())
+                        {
+                            results.Add(new DiscussionModel
+                            {
+                                Id = reader.GetInt32(0),
+                                Nom = reader.GetString(1),
+                                Type = reader.GetString(2)
+                            });
+                        }
+                    }
+                }
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine("Erreur recherche : " + e.Message);
+            }
+            finally
+            {
+                if (liasonBase != null)
+                {
+                    liasonBase.Close();
+                }
+            }
+
+            return results;
+        }*/
+
+        // misy recherche ho an'ny admin sy utilisateur normal
+        public List<DiscussionModel> SearchUtilisateurEtGroupe(
+            NpgsqlConnection liasonBase,
+            int idUtilisateur,
+            string searchTerm,
+            int idEspaceActif,
+            string role)
+        {
+            List<DiscussionModel> results = new List<DiscussionModel>();
+
+            if (liasonBase == null || liasonBase.State == ConnectionState.Closed)
+            {
+                Connexion connexion = new Connexion();
+                liasonBase = connexion.ConnectPostgres();
+                liasonBase.Open();
+            }
+
+            try
+            {
+                // ===============================
+                // 🔎 1) Recherche UTILISATEURS
+                // ===============================
+
+                string sqlUtilisateurs;
+
+                if (role == "m_1")
+                {
+                    // ⭐ ADMIN : pas de filtre par espace
+                    sqlUtilisateurs = @"
+                SELECT DISTINCT u.id_utilisateur AS id, 
+                       CONCAT(u.prenom, ' ', u.nom) AS nom, 
+                       'utilisateur' AS type
+                FROM utilisateur u
+                WHERE (LOWER(u.nom) LIKE LOWER(@searchTerm)
+                    OR LOWER(u.prenom) LIKE LOWER(@searchTerm)
+                    OR LOWER(u.matricule) LIKE LOWER(@searchTerm))
+                  AND u.id_utilisateur <> @idUtilisateur
+                ORDER BY nom ASC";
+                }
+                else
+                {
+                    // ⭐ UTILISATEUR NORMAL : filtrage par espace
+                    sqlUtilisateurs = @"
+                SELECT DISTINCT u.id_utilisateur AS id, 
+                       CONCAT(u.prenom, ' ', u.nom) AS nom, 
+                       'utilisateur' AS type
+                FROM utilisateur u
+                JOIN utilisateur_espace_travail uet ON u.id_utilisateur = uet.id_utilisateur
+                WHERE uet.id_espace_travail = @idEspaceActif
+                  AND (LOWER(u.nom) LIKE LOWER(@searchTerm)
+                       OR LOWER(u.prenom) LIKE LOWER(@searchTerm)
+                       OR LOWER(u.matricule) LIKE LOWER(@searchTerm))
+                  AND u.id_utilisateur <> @idUtilisateur
+                ORDER BY nom ASC";
+                }
+
+                using (var cmd = new NpgsqlCommand(sqlUtilisateurs, liasonBase))
+                {
+                    cmd.Parameters.AddWithValue("@searchTerm", "%" + searchTerm + "%");
+                    cmd.Parameters.AddWithValue("@idUtilisateur", idUtilisateur);
+
+                    if (role != "m_1")
+                        cmd.Parameters.AddWithValue("@idEspaceActif", idEspaceActif);
+
+                    using (var reader = cmd.ExecuteReader())
+                    {
+                        while (reader.Read())
+                        {
+                            results.Add(new DiscussionModel
+                            {
+                                Id = reader.GetInt32(0),
+                                Nom = reader.GetString(1),
+                                Type = reader.GetString(2)
+                            });
+                        }
+                    }
+                }
+
+                // ===============================
+                // 🔎 2) Recherche GROUPES
+                // ===============================
+
+                string sqlGroupes;
+
+                if (role == "m_1")
+                {
+                    // ⭐ ADMIN : aucun filtre espace, ni appartenance au groupe
+                    sqlGroupes = @"
+                SELECT g.id_groupe_discussion AS id, 
+                       g.nom, 
+                       'groupe' AS type
+                FROM groupe_discussion g
+                WHERE LOWER(g.nom) LIKE LOWER(@searchTerm)
+                ORDER BY g.nom ASC";
+                }
+                else
+                {
+                    // ⭐ UTILISATEUR NORMAL : groupes du même espace + à lesquels il appartient
+                    sqlGroupes = @"
+                SELECT g.id_groupe_discussion AS id, 
+                       g.nom, 
+                       'groupe' AS type
+                FROM groupe_discussion g
+                JOIN utilisateur_groupe_discussion ug 
+                    ON ug.id_groupe_discussion = g.id_groupe_discussion
+                WHERE g.id_espace_travail = @idEspaceActif
+                  AND ug.id_utilisateur = @idUtilisateur
+                  AND LOWER(g.nom) LIKE LOWER(@searchTerm)
+                ORDER BY g.nom ASC";
+                }
+
+                using (var cmd = new NpgsqlCommand(sqlGroupes, liasonBase))
+                {
+                    cmd.Parameters.AddWithValue("@searchTerm", "%" + searchTerm + "%");
+
+                    if (role != "m_1")
+                    {
+                        cmd.Parameters.AddWithValue("@idUtilisateur", idUtilisateur);
+                        cmd.Parameters.AddWithValue("@idEspaceActif", idEspaceActif);
+                    }
+
+                    using (var reader = cmd.ExecuteReader())
+                    {
+                        while (reader.Read())
+                        {
+                            results.Add(new DiscussionModel
+                            {
+                                Id = reader.GetInt32(0),
+                                Nom = reader.GetString(1),
+                                Type = reader.GetString(2)
+                            });
+                        }
+                    }
+                }
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine("Erreur recherche : " + e.Message);
+            }
+            finally
+            {
+                liasonBase?.Close();
+            }
+
+            return results;
+        }
+
+        public async Task<MessageModel> GetMessageIdAsync(int idMessage)
+        {
+            return await _context.Message.FindAsync(idMessage);
         }
 
 

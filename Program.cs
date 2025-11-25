@@ -1,3 +1,5 @@
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
 using System.Text;
 using MessagerieInterneAPI;
 using MessagerieInterneAPI.Data;
@@ -5,14 +7,17 @@ using MessagerieInterneAPI.Modules.Discussion;
 using MessagerieInterneAPI.Modules.Hubs;
 using MessagerieInterneAPI.Modules.Role;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.IdentityModel.Tokens;
 
+JwtSecurityTokenHandler.DefaultInboundClaimTypeMap.Clear();
 var builder = WebApplication.CreateBuilder(args);
 var jwtIssuer = builder.Configuration.GetSection("Jwt:Issuer").Get<string>();
 var jwtKey = builder.Configuration.GetSection("Jwt:Key").Get<string>();
+
 
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
  .AddJwtBearer(options =>
@@ -27,7 +32,8 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
          ValidIssuer = jwtIssuer,
          ValidAudience = jwtIssuer,
          IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey)),
-         RoleClaimType = "Logistique"
+        //  RoleClaimType = "Logistique",
+         RoleClaimType = ClaimTypes.Role
      };
 
      // 👇 très important pour permettre l'authentification WebSocket
@@ -110,13 +116,22 @@ builder.Services.AddScoped<GroupeDiscussionService>();
 builder.Services.AddScoped<RoleService>();
 builder.Services.AddScoped<MessageService>();
 builder.Services.AddScoped<PieceJointService>();
+builder.Services.AddScoped<EspaceTravailService>();
+builder.Services.AddScoped<RoleService>();
+builder.Services.AddScoped<ResetService>();
 builder.Services.AddSignalR();
 
 builder.Services.AddSingleton<IUserIdProvider, MyCustomUserIdProvider>();
 
 builder.Services.AddAuthorization();
 
+builder.Services.Configure<FormOptions>(options =>
+{
+    options.MultipartBodyLengthLimit = 30 * 1024 * 1024; // 30 Mo
+});
+
 var app = builder.Build();
+
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
@@ -140,7 +155,7 @@ app.MapHub<ChatHub>("/chathub");
 app.UseStaticFiles(); // pour wwwroot par défaut
 
 // si tu stockes les fichiers ailleurs, par ex. "Uploads"
-var uploadsPath = Path.Combine(AppContext.BaseDirectory, "..", "Uploads");
+/*var uploadsPath = Path.Combine(AppContext.BaseDirectory, "..", "Uploads");
 
 // Normalise le chemin absolu (résout les "..")
 uploadsPath = Path.GetFullPath(uploadsPath);
@@ -152,7 +167,37 @@ app.UseStaticFiles(new StaticFileOptions
 {
     FileProvider = new PhysicalFileProvider(uploadsPath),
     RequestPath = "/Uploads"
+});*/
+
+// version dev
+/*var uploadsPath = Path.Combine(Directory.GetCurrentDirectory(), "Uploads");
+
+if (!Directory.Exists(uploadsPath))
+    Directory.CreateDirectory(uploadsPath);
+
+app.UseStaticFiles(new StaticFileOptions
+{
+    FileProvider = new PhysicalFileProvider(uploadsPath),
+    RequestPath = "/Uploads"
+});*/
+
+// Version dev + prod 
+// var uploadsPath = Path.Combine(app.Environment.WebRootPath, "Uploads");
+var uploadsPath = Path.Combine(Directory.GetCurrentDirectory(),"wwwroot", "Uploads");
+
+if (!Directory.Exists(uploadsPath))
+    Directory.CreateDirectory(uploadsPath);
+
+app.UseStaticFiles(new StaticFileOptions
+{
+    ServeUnknownFileTypes = true, // ⚠️ IMPORTANT
+    DefaultContentType = "application/octet-stream",
+    FileProvider = new PhysicalFileProvider(uploadsPath),
+    RequestPath = "/Uploads"
 });
+
+
+
 
 
 

@@ -36,6 +36,7 @@ namespace MessagerieInterneAPI
             return Ok(mesGrp);
         }
 
+        [Authorize]
         [HttpPost("creerGroupe")]
         public async Task<IActionResult> CreateGroupeDiscussion([FromBody] GroupeDiscussionDTO dto)
         {
@@ -46,10 +47,13 @@ namespace MessagerieInterneAPI
             var idUtilisateurClaim = User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier);
             if (idUtilisateurClaim == null) return Unauthorized();
 
+            var idEspaceClaim = User.Claims.FirstOrDefault(c => c.Type == "EspaceActifId")?.Value;
+
             int idUtilisateur = int.Parse(idUtilisateurClaim.Value);
+            int idEspaceActif = int.Parse(idEspaceClaim);
             Console.WriteLine("id ve hitany (groupe discussion): " + idUtilisateur);
 
-            await _service.CreerGroupe(connexion.ConnectPostgres(), dto, idUtilisateur);
+            await _service.CreerGroupe(connexion.ConnectPostgres(), dto, idUtilisateur, idEspaceActif);
             return Ok(new { message = "Groupe créé avec succès ", dto.Nom });
 
         }

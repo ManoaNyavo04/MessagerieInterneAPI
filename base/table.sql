@@ -37,6 +37,7 @@ CREATE TABLE espace_travail(
     foreign key (id_pole) references pole(id_pole),
     foreign key (id_admin) references utilisateur(id_utilisateur)
 );
+ALTER TABLE espace_travail ADD COLUMN deleted BOOLEAN DEFAULT FALSE;
 
 CREATE TABLE utilisateur_espace_travail(
     id_utilisateur_espace_travail serial primary key,
@@ -80,6 +81,13 @@ CREATE TABLE message (
     foreign key (id_groupe_discussion) references groupe_discussion(id_groupe_discussion),
     foreign key (id_status_msg) references statuts_message(id_status_msg)
 );
+ALTER TABLE message ADD COLUMN id_espace_travail INT;
+ALTER TABLE message
+ADD CONSTRAINT fk_message_espace
+FOREIGN KEY (id_espace_travail)
+REFERENCES espace_travail(id_espace_travail);
+
+
 
 CREATE TABLE type_piece_joint (
     id_type_piece_joint serial primary key,
