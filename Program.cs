@@ -105,8 +105,8 @@ builder.Services.AddCors(options =>
             policy.WithOrigins("http://10.5.100.7:3004")
                   .AllowAnyHeader()
                   .AllowAnyMethod()
-                  .AllowCredentials();
-                //   .SetIsOriginAllowed(_ => true);
+                  .AllowCredentials()
+                  .SetIsOriginAllowed(_ => true);
         });
 });
 
@@ -143,10 +143,7 @@ if (app.Environment.IsDevelopment())
 app.UseRouting();
 
 app.UseCors("AllowLocalhost3000");
-app.Urls.Add("http://10.5.100.7:5040");
-// app.Urls.Add("http://*:5040");
-
-
+// app.Urls.Add("http://10.5.100.7:5040");
 
 app.UseAuthentication();
 app.UseAuthorization();
@@ -155,8 +152,7 @@ app.MapControllers();
 
 
 app.MapHub<ChatHub>("/chathub");
-app.UseStaticFiles(); // pour wwwroot par d
-// éfaut
+app.UseStaticFiles(); // pour wwwroot par défaut
 
 // si tu stockes les fichiers ailleurs, par ex. "Uploads"
 /*var uploadsPath = Path.Combine(AppContext.BaseDirectory, "..", "Uploads");
