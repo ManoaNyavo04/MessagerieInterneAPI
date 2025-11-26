@@ -93,7 +93,10 @@ builder.Services.AddSwaggerGen(options =>
     });
 });
 
-
+var origins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>();
+if(origins == null || origins.Length == 0){
+    Console.Error.WriteLine("Aucun origine CORS n'est configuré. Veuillez verifier le fichier de configuration.");
+}
 
 // Ajoute le service CORS
 builder.Services.AddCors(options =>
@@ -102,7 +105,7 @@ builder.Services.AddCors(options =>
         policy =>
         {
             // policy.WithOrigins("http://localhost:3000")
-            policy.WithOrigins("http://10.5.100.7:3004")
+            policy.WithOrigins(origins != null?origins:[])
                   .AllowAnyHeader()
                   .AllowAnyMethod()
                   .AllowCredentials();
@@ -143,7 +146,7 @@ if (app.Environment.IsDevelopment())
 app.UseRouting();
 
 app.UseCors("AllowLocalhost3000");
-app.Urls.Add("http://10.5.100.7:5040");
+// app.Urls.Add("http://10.5.100.7:5040");
 
 app.UseAuthentication();
 app.UseAuthorization();
