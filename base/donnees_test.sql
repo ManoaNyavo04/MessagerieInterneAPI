@@ -7,7 +7,14 @@ VALUES (1, 'Espace Admin');
 INSERT INTO utilisateur_espace_travail (id_utilisateur, id_espace_travail)
 VALUES (0, 1);
 
+INSERT INTO utilisateur (nom, prenom, matricule, id_role, mdp) VALUES
+('Admin1', 'Admin1', 'Admin1', 1, crypt('Admin12025', gen_salt('bf')));
 
+INSERT INTO espace_travail (id_espace_travail, nom)
+VALUES (1, 'Espace Admin');
+
+INSERT INTO utilisateur_espace_travail (id_utilisateur, id_espace_travail)
+VALUES (757, 1);
 
 
 
@@ -21,6 +28,7 @@ INSERT INTO pole (pole) VALUES
 INSERT INTO role (role) VALUES
 ('admin'),
 ('utilisateur');
+
 
 INSERT INTO utilisateur (nom, prenom, matricule, id_role, mdp) VALUES
 ('Rakoto', 'Jean', 'MAT001', 1, crypt('Jean2025', gen_salt('bf'))),

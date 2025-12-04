@@ -239,7 +239,7 @@ namespace MessagerieInterneAPI.Modules.Discussion
             return messages;
         }
 
-        public async Task<MessageModel> SendMessage(MessageModel message)
+        /*public async Task<MessageModel> SendMessage(MessageModel message)
         {
             const string sql = @"
                 INSERT INTO message (
@@ -268,7 +268,44 @@ namespace MessagerieInterneAPI.Modules.Discussion
             message.Id_message = Convert.ToInt32(id); // Assure-toi que le champ existe dans MessageModel
 
             return message;
+        }*/
+
+        public async Task<MessageModel> SendMessage(MessageModel message)
+        {
+            const string sql = @"
+        INSERT INTO message (
+            id_expediteur, id_destinataire, id_groupe_discussion, contenu,
+            date_envoie, id_status_msg, id_espace_travail
+        )
+        VALUES (
+            @id_expediteur, @id_destinataire, @id_groupe_discussion, @contenu,
+            @date_envoie, @id_status_msg, @id_espace_travail
+        )
+        RETURNING id_message";
+            Console.WriteLine(message.Id_espace_travail.Value + " ato amin'ny message service");
+
+            using var liasonBase = new Connexion().ConnectPostgres();
+            liasonBase.Open();
+
+            using var cmd = new NpgsqlCommand(sql, liasonBase);
+            cmd.Parameters.AddWithValue("@id_expediteur", message.Id_expediteur);
+            cmd.Parameters.AddWithValue("@id_destinataire", (object?)message.Id_destinataire ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("@id_groupe_discussion", (object?)message.Id_groupe_discussion ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("@contenu", message.Contenu);
+            cmd.Parameters.AddWithValue("@date_envoie", message.Date_envoie);
+            cmd.Parameters.AddWithValue("@id_status_msg", message.Id_status_msg);
+
+            if (message.Id_espace_travail.HasValue)
+                cmd.Parameters.AddWithValue("@id_espace_travail", message.Id_espace_travail.Value);
+            else
+                cmd.Parameters.AddWithValue("@id_espace_travail", DBNull.Value);
+
+            var id = await cmd.ExecuteScalarAsync();
+            message.Id_message = Convert.ToInt32(id);
+
+            return message;
         }
+
 
 
 
@@ -399,32 +436,27 @@ namespace MessagerieInterneAPI.Modules.Discussion
         {
             List<DiscussionModel> discussions = new List<DiscussionModel>();
             string sql = @"
-                SELECT 
-                    CASE 
-                        WHEN id_expediteur = @userId THEN id_destinataire
-                        ELSE id_expediteur
-                    END AS id_autre_utilisateur,
+    SELECT DISTINCT ON (id_autre_utilisateur)
+        id_autre_utilisateur,
+        nom_autre_utilisateur,
+        'prive' AS type
+    FROM (
+        SELECT 
+            CASE 
+                WHEN id_expediteur = @userId THEN id_destinataire
+                ELSE id_expediteur
+            END AS id_autre_utilisateur,
 
-                    CASE 
-                        WHEN id_expediteur = @userId THEN nom_destinataire
-                        ELSE nom_expediteur
-                    END AS nom_autre_utilisateur,
+            CASE 
+                WHEN id_expediteur = @userId THEN nom_destinataire
+                ELSE nom_expediteur
+            END AS nom_autre_utilisateur
+        FROM v_discussions_individuelles
+        WHERE (id_expediteur = @userId OR id_destinataire = @userId)
+    ) AS sub
+    ORDER BY id_autre_utilisateur;
+";
 
-                    'prive' AS type,
-                    id_espace_travail
-                FROM v_discussions_individuelles
-                WHERE (id_expediteur = @userId OR id_destinataire = @userId)
-                AND id_espace_travail = @idEspaceTravail
-                GROUP BY 
-                    CASE 
-                        WHEN id_expediteur = @userId THEN id_destinataire
-                        ELSE id_expediteur
-                    END,
-                    CASE 
-                        WHEN id_expediteur = @userId THEN nom_destinataire
-                        ELSE nom_expediteur
-                    END,
-                    id_espace_travail";
 
 
 
@@ -440,7 +472,7 @@ namespace MessagerieInterneAPI.Modules.Discussion
             {
                 NpgsqlCommand cmd = new NpgsqlCommand(sql, liasonBase);
                 cmd.Parameters.AddWithValue("@userId", userId);
-                cmd.Parameters.AddWithValue("@idEspaceTravail", idEspaceTravail);
+                // cmd.Parameters.AddWithValue("@idEspaceTravail", idEspaceTravail);
                 NpgsqlDataReader reader = cmd.ExecuteReader();
 
                 while (reader.Read())
