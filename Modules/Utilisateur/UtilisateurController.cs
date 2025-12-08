@@ -98,7 +98,7 @@ namespace MessagerieInterneAPI.Modules.Utilisateur
         }
 
         [HttpPost("addUtilisateur")]
-        public async Task<IActionResult> AddUtilisateur([FromBody] UtilisateurModel utilisateur)
+        public async Task<IActionResult> AddUtilisateur([FromBody] UtilisateurDTO utilisateur)
         {
             var connexion = new Connexion().ConnectPostgres();
             var result = await _service.VerifMatricule(connexion, utilisateur);
@@ -182,6 +182,30 @@ namespace MessagerieInterneAPI.Modules.Utilisateur
             var utilisateurs = _service.GetAllUtilisateurs(connex); // <-- renvoyer la liste mise à jour
             return Ok(utilisateurs);
         }
+
+        [HttpPut("modifierUtilisateur/{id}")]
+        public async Task<IActionResult> UpdateUtilisateur(int id, UtilisateurDTO dto)
+        {
+            var utilisateur = await _service.UpdateUtilisateurAsync(id, dto);
+
+            if (utilisateur == null)
+                return NotFound();
+
+            return Ok(utilisateur);
+        }
+
+        [HttpPut("supprimerUtilisateur/{id}")]
+        public async Task<IActionResult> RestoreUtilisateur(int id)
+        {
+            var result = await _service.RestoreUtilisateurAsync(id);
+
+            if (!result)
+                return NotFound("Utilisateur introuvable");
+
+            return Ok("Utilisateur restauré avec succès");
+        }
+
+
     }
 }
 

@@ -28,6 +28,7 @@ CREATE TABLE utilisateur(
     foreign key (id_role) references role(id_role)
 );
 alter TABLE utilisateur ADD COLUMN mdp TEXT;
+alter TABLE utilisateur ADD COLUMN deleted BOOLEAN DEFAULT FALSE;
 
 CREATE TABLE espace_travail(
     id_espace_travail serial primary key,

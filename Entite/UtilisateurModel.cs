@@ -22,6 +22,8 @@ namespace MessagerieInterneAPI.Entite
         public int Id_role { get; set; }
         [Column("role")]
         public string Role { get; set; } // Added to hold the role name
+        [Column("deleted")]
+        public bool Deleted { get; set; }
 
         public UtilisateurModel()
         {
@@ -29,7 +31,7 @@ namespace MessagerieInterneAPI.Entite
 
         }
 
-        public UtilisateurModel(int user, string nom, string prenom, string matricule,string mdp,  int role, string roleName)
+        public UtilisateurModel(int user, string nom, string prenom, string matricule,string mdp,  int role, string roleName, bool deleted )
         {
             Id_utilisateur = user;
             Nom = nom;
@@ -38,6 +40,7 @@ namespace MessagerieInterneAPI.Entite
             Mdp = mdp;
             Id_role = role;
             Role = roleName;
+            Deleted = deleted;
         
         }
 

@@ -72,7 +72,7 @@ namespace MessagerieInterneAPI
             return isValid ? user : null;
         }
 
-        public void InsertUtilisateur(NpgsqlConnection liasonBase, UtilisateurModel utilisateur)
+        public void InsertUtilisateur(NpgsqlConnection liasonBase, UtilisateurDTO utilisateur)
         {
             String sql = @"INSERT INTO utilisateur (nom, prenom, matricule,  id_role,mdp) 
                 VALUES (@nom, @prenom, @matricule, @id_role, @mdp)";
@@ -115,7 +115,7 @@ namespace MessagerieInterneAPI
             }
         }
 
-        public async Task<bool> VerifMatricule(NpgsqlConnection liasonBase, UtilisateurModel utilisateur)
+        public async Task<bool> VerifMatricule(NpgsqlConnection liasonBase, UtilisateurDTO utilisateur)
         {
             var user = await _context.Utilisateur
                 .FirstOrDefaultAsync(u => u.Matricule == utilisateur.Matricule);
@@ -147,7 +147,7 @@ namespace MessagerieInterneAPI
         {
             List<UtilisateurModel> allUtilisateurs = new List<UtilisateurModel>();
 
-            String sql = "SELECT * FROM v_info_utilisateur";
+            String sql = "SELECT * FROM v_info_utilisateur WHERE deleted = false";
             if (liaisonbase == null || liaisonbase.State == ConnectionState.Closed)
             {
                 liaisonbase = connexion.ConnectPostgres();
@@ -499,6 +499,40 @@ namespace MessagerieInterneAPI
                 }
             }
         }
+
+        public async Task<UtilisateurTableModel?> UpdateUtilisateurAsync(int id, UtilisateurDTO dto)
+        {
+            var utilisateur = await _context.UtilisateurTable
+                .FirstOrDefaultAsync(u => u.Id_utilisateur == id);
+
+            if (utilisateur == null)
+                return null;
+
+            utilisateur.Nom = dto.Nom;
+            utilisateur.Prenom = dto.Prenom;
+            utilisateur.Matricule = dto.Matricule;
+            utilisateur.Id_role = dto.Id_role;
+
+            await _context.SaveChangesAsync();
+
+            return utilisateur;
+        }
+
+        public async Task<bool> RestoreUtilisateurAsync(int id)
+        {
+            var utilisateur = await _context.UtilisateurTable
+                .FirstOrDefaultAsync(u => u.Id_utilisateur == id);
+
+            if (utilisateur == null)
+                return false;
+
+            utilisateur.Deleted = false; // 👈 mise à jour du champ
+
+            await _context.SaveChangesAsync();
+            return true;
+        }
+
+
 
     }
 }

@@ -6,7 +6,8 @@ CREATE OR REPLACE VIEW v_info_utilisateur AS (
     u.matricule, 
     u.mdp, 
     u.id_role, 
-    r.role 
+    r.role,
+    u.deleted
     from utilisateur u  
     join role r on r.id_role = u.id_role order by u.id_utilisateur
 );

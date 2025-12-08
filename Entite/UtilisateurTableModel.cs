@@ -20,9 +20,11 @@ namespace MessagerieInterneAPI
         
         [Column("mdp")]
         public string Mdp { get; set; }
+        [Column("deleted")]
+        public bool Deleted { get; set; }
 
         public UtilisateurTableModel() { }
-        public UtilisateurTableModel(int idUtilisateur, string nom, string prenom, string matricule, int id_role, string mdp)
+        public UtilisateurTableModel(int idUtilisateur, string nom, string prenom, string matricule, int id_role, string mdp, bool deleted)
         {
             Id_utilisateur = idUtilisateur;
             Nom = nom;
@@ -30,6 +32,7 @@ namespace MessagerieInterneAPI
             Matricule = matricule;
             Id_role = id_role;
             Mdp = mdp;
+            Deleted = deleted;
         }
     }
 }
