@@ -10,10 +10,12 @@ namespace MessagerieInterneAPI.Modules.Discussion
     {
         private readonly NpgsqlDataSource _dataSource;
         private readonly AppDbContext _context;
+        private readonly int _editDelayMinutes;
 
-        public MessageService(NpgsqlDataSource dataSource)
+        public MessageService(NpgsqlDataSource dataSource, IConfiguration config)
         {
             _dataSource = dataSource;
+            _editDelayMinutes = config.GetValue<int>("MessageSettings:EditDelayMinutes");
         }
 
         public MessageService()
@@ -275,14 +277,15 @@ namespace MessagerieInterneAPI.Modules.Discussion
             const string sql = @"
         INSERT INTO message (
             id_expediteur, id_destinataire, id_groupe_discussion, contenu,
-            date_envoie, id_status_msg, id_espace_travail
+            date_envoie, id_status_msg, id_espace_travail,
+            modifiable_jusqua, date_modification
         )
         VALUES (
             @id_expediteur, @id_destinataire, @id_groupe_discussion, @contenu,
-            @date_envoie, @id_status_msg, @id_espace_travail
+            @date_envoie, @id_status_msg, @id_espace_travail,
+            @modifiable_jusqua, NULL
         )
         RETURNING id_message";
-            Console.WriteLine(message.Id_espace_travail.Value + " ato amin'ny message service");
 
             using var liasonBase = new Connexion().ConnectPostgres();
             liasonBase.Open();
@@ -300,8 +303,18 @@ namespace MessagerieInterneAPI.Modules.Discussion
             else
                 cmd.Parameters.AddWithValue("@id_espace_travail", DBNull.Value);
 
+            // On calcule la limite de modification
+            var modifiableJusqua = message.Date_envoie.AddMinutes(_editDelayMinutes);
+            cmd.Parameters.AddWithValue("@modifiable_jusqua", modifiableJusqua);
+
+            // Pas encore modifié
+            cmd.Parameters.AddWithValue("@date_modification", DBNull.Value);
+
             var id = await cmd.ExecuteScalarAsync();
             message.Id_message = Convert.ToInt32(id);
+
+            // On renvoie aussi la date limite
+            message.Modifiable_jusqua = modifiableJusqua;
 
             return message;
         }
@@ -1171,6 +1184,59 @@ namespace MessagerieInterneAPI.Modules.Discussion
         {
             return await _context.Message.FindAsync(idMessage);
         }
+
+        public async Task UpdateMessageContent(int idMessage, string newContent)
+        {
+            const string sql = @"
+                UPDATE message
+                SET contenu = @contenu,
+                    date_modification = @date_modification
+                WHERE id_message = @id_message
+            ";
+
+            using var connect = new Connexion().ConnectPostgres();
+            connect.Open();
+
+            using var cmd = new NpgsqlCommand(sql, connect);
+            cmd.Parameters.AddWithValue("@contenu", newContent);
+            cmd.Parameters.AddWithValue("@date_modification", DateTime.UtcNow);
+            cmd.Parameters.AddWithValue("@id_message", idMessage);
+
+            await cmd.ExecuteNonQueryAsync();
+        }
+
+        public async Task<MessageModel> GetMessageById(NpgsqlConnection db, int idMessage)
+        {
+            const string sql = "SELECT * FROM v_utilisateur_message WHERE id_message = @id_message";
+
+            using var cmd = new NpgsqlCommand(sql, db);
+            cmd.Parameters.AddWithValue("@id_message", idMessage);
+
+            using var reader = await cmd.ExecuteReaderAsync();
+            if (await reader.ReadAsync())
+            {
+                return new MessageModel
+                {
+                    Id_message = reader.GetInt32(reader.GetOrdinal("id_message")),
+                    Id_expediteur = reader.GetInt32(reader.GetOrdinal("id_expediteur")),
+                    Nom_expediteur = reader.GetString(reader.GetOrdinal("nom_expediteur")),
+                    Id_destinataire = reader["id_destinataire"] as int?,
+                    Id_groupe_discussion = reader["id_groupe_discussion"] as int?,
+                    Contenu = reader.GetString(reader.GetOrdinal("contenu")),
+                    Date_envoie = reader.GetDateTime(reader.GetOrdinal("date_envoie")),
+                    Id_status_msg = reader.GetInt32(reader.GetOrdinal("id_status_msg")),
+                    Chemin = reader["chemin"] as string,
+                    Nom_original = reader["nom_original"] as string,
+                    Id_espace_travail = reader["id_espace_travail"] as int?,
+                    Modifiable_jusqua = reader["modifiable_jusqua"] as DateTime?,
+                    Date_modification = reader["date_modification"] as DateTime?
+                };
+            }
+
+            return null;
+        }
+
+
 
 
 

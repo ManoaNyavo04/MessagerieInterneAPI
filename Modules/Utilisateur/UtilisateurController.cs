@@ -183,6 +183,7 @@ namespace MessagerieInterneAPI.Modules.Utilisateur
             return Ok(utilisateurs);
         }
 
+        [Authorize(Roles = "m_1")]
         [HttpPut("modifierUtilisateur/{id}")]
         public async Task<IActionResult> UpdateUtilisateur(int id, UtilisateurDTO dto)
         {
@@ -194,6 +195,7 @@ namespace MessagerieInterneAPI.Modules.Utilisateur
             return Ok(utilisateur);
         }
 
+        [Authorize(Roles = "m_1")]
         [HttpPut("supprimerUtilisateur/{id}")]
         public async Task<IActionResult> RestoreUtilisateur(int id)
         {
@@ -202,7 +204,8 @@ namespace MessagerieInterneAPI.Modules.Utilisateur
             if (!result)
                 return NotFound("Utilisateur introuvable");
 
-            return Ok("Utilisateur restauré avec succès");
+            return Ok(new { message = "Utilisateur restauré avec succès" });
+
         }
 
 

@@ -9,7 +9,7 @@ namespace MessagerieInterneAPI
         [Key]
         [Column("id_message")]
         public int Id_message { get; set; }
-        
+
         [Column("id_expediteur")]
         public int Id_expediteur { get; set; }
         [Column("nom_expediteur")]
@@ -38,10 +38,17 @@ namespace MessagerieInterneAPI
         [NotMapped]
         public List<string> Liste_utilisateur_vu { get; set; }
 
+        [NotMapped]
+        public DateTime? Modifiable_jusqua { get; set; }
+
+        [NotMapped]
+        public DateTime? Date_modification { get; set; }
+
+
 
         public MessageModel() { }
 
-        public MessageModel(int id_message, int id_expediteur, String nomExpediteur, int id_destinataire, int id_groupe_discussion, string contenu, DateTime date_envoi, int id_status_msg, int id_piece_jointe, string chemin,string nomOriginal, int? idEspaceTravail, bool estLu, List<string> listeUtilisateurVu)
+        public MessageModel(int id_message, int id_expediteur, String nomExpediteur, int id_destinataire, int id_groupe_discussion, string contenu, DateTime date_envoi, int id_status_msg, int id_piece_jointe, string chemin, string nomOriginal, int? idEspaceTravail, bool estLu, List<string> listeUtilisateurVu)
         {
             Id_message = id_message;
             Id_expediteur = id_expediteur;

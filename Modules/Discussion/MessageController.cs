@@ -66,7 +66,7 @@ namespace MessagerieInterneAPI.Modules.Discussion
 
 
             var discussions = new List<DiscussionModel>();
-            discussions.AddRange(_service.GetGrpDiscussionByUser(idUtilisateur,idEspaceActif, conn));
+            discussions.AddRange(_service.GetGrpDiscussionByUser(idUtilisateur, idEspaceActif, conn));
             discussions.AddRange(_service.GetDiscussionIndividuelleByUser(idUtilisateur, idEspaceActif, conn));
 
             return Ok(discussions);
@@ -175,6 +175,31 @@ namespace MessagerieInterneAPI.Modules.Discussion
             var results = _service.SearchUtilisateurEtGroupe(connexion.ConnectPostgres(), idUtilisateur, searchTerm, idEspaceActif, role);
             return Ok(results);
         }
+
+        [HttpPut("modifier-message/{id}")]
+        public async Task<IActionResult> ModifierMessage(int id, [FromBody] UpdateMessageDTO dto)
+        {
+            var message = await _context.Message.FindAsync(id);
+            if (message == null)
+                return NotFound("Message introuvable");
+
+            // Vérifier que c'est bien l'expéditeur
+            if (message.Id_expediteur != dto.IdUtilisateur)
+                return Unauthorized("Vous ne pouvez modifier que vos propres messages");
+
+            // Vérifier que le délai n'est pas dépassé
+            if (message.Modifiable_jusqua < DateTime.UtcNow)
+                return BadRequest("Le délai de modification est dépassé");
+
+            // Effectuer la modification
+            message.Contenu = dto.NouveauContenu;
+            message.Date_modification = DateTime.UtcNow;
+
+            await _context.SaveChangesAsync();
+
+            return Ok(new { success = true });
+        }
+
 
     }
 }

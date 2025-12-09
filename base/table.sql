@@ -88,6 +88,13 @@ ADD CONSTRAINT fk_message_espace
 FOREIGN KEY (id_espace_travail)
 REFERENCES espace_travail(id_espace_travail);
 
+ALTER TABLE message 
+ADD COLUMN date_modification TIMESTAMP NULL;
+
+ALTER TABLE message 
+ADD COLUMN modifiable_jusqua TIMESTAMP NULL;
+
+
 
 
 CREATE TABLE type_piece_joint (

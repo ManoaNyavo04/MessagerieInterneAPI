@@ -526,7 +526,7 @@ namespace MessagerieInterneAPI
             if (utilisateur == null)
                 return false;
 
-            utilisateur.Deleted = false; // 👈 mise à jour du champ
+            utilisateur.Deleted = true; // 👈 mise à jour du champ
 
             await _context.SaveChangesAsync();
             return true;
