@@ -50,6 +50,9 @@ INSERT INTO statuts_message (statuts) VALUES
 ('archivé'),
 ('supprimé');
 
+INSERT INTO statuts_message (statuts) VALUES
+('modifié');
+
 INSERT INTO espace_travail (nom, id_pole, id_admin) VALUES
 ('Projet SIG', 1, 1),
 ('Suivi cartographique', 2, 5),

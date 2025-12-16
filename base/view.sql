@@ -73,12 +73,14 @@ CREATE or REPLACE VIEW v_utilisateur_message AS (
         pj.id_piece_joint,
         pj.chemin,
         pj.nom_original,
-        m.id_espace_travail
+        m.id_espace_travail,
+        m.date_modification,
+        m.modifiable_jusqua
     from message m 
     join utilisateur u on u.id_utilisateur = m.id_expediteur 
     left join piece_joint pj on pj.id_message = m.id_message
     order by id_message desc
-);
+); 
 
 CREATE or REPLACE VIEW v_piece_joint AS (
     select 

@@ -12,10 +12,11 @@ namespace MessagerieInterneAPI.Modules.Discussion
         private readonly AppDbContext _context;
         private readonly int _editDelayMinutes;
 
-        public MessageService(NpgsqlDataSource dataSource, IConfiguration config)
+        public MessageService(NpgsqlDataSource dataSource, IConfiguration config, AppDbContext context)
         {
             _dataSource = dataSource;
             _editDelayMinutes = config.GetValue<int>("MessageSettings:EditDelayMinutes");
+            _context = context ?? throw new ArgumentNullException(nameof(context));
         }
 
         public MessageService()
@@ -98,18 +99,19 @@ namespace MessagerieInterneAPI.Modules.Discussion
                     Chemin = reader.IsDBNull(9) ? null : reader.GetString(9),
                     Nom_original = reader.IsDBNull(10) ? null : reader.GetString(10),
                     Id_espace_travail = reader.IsDBNull(11) ? null : reader.GetInt32(11),
-                    Est_lu = reader.GetBoolean(12)
+
+                    Date_modification = reader.IsDBNull(12) ? null : reader.GetDateTime(12),
+                    Modifiable_jusqua = reader.IsDBNull(13) ? null : reader.GetDateTime(13),
+
+                    Est_lu = reader.GetBoolean(14)
                 };
 
                 if (type == "groupe")
                 {
-                    // Index 12 existe uniquement pour les groupes
-                    msg.Liste_utilisateur_vu = !reader.IsDBNull(13)
-                    ? reader.GetFieldValue<string[]>(13).ToList()
+                    msg.Liste_utilisateur_vu = !reader.IsDBNull(15)
+                    ? reader.GetFieldValue<string[]>(15).ToList()
                     : new List<string>();
-
                 }
-
 
                 messages.Add(msg);
             }
@@ -276,26 +278,46 @@ namespace MessagerieInterneAPI.Modules.Discussion
         {
             const string sql = @"
         INSERT INTO message (
-            id_expediteur, id_destinataire, id_groupe_discussion, contenu,
-            date_envoie, id_status_msg, id_espace_travail,
-            modifiable_jusqua, date_modification
+            id_expediteur,
+            id_destinataire,
+            id_groupe_discussion,
+            contenu,
+            date_envoie,
+            id_status_msg,
+            id_espace_travail,
+            modifiable_jusqua,
+            date_modification
         )
         VALUES (
-            @id_expediteur, @id_destinataire, @id_groupe_discussion, @contenu,
-            @date_envoie, @id_status_msg, @id_espace_travail,
-            @modifiable_jusqua, NULL
+            @id_expediteur,
+            @id_destinataire,
+            @id_groupe_discussion,
+            @contenu,
+            @date_envoie,
+            @id_status_msg,
+            @id_espace_travail,
+            @modifiable_jusqua,
+            NULL
         )
-        RETURNING id_message";
+        RETURNING
+            id_message,
+            date_envoie,
+            modifiable_jusqua;
+    ";
 
-            using var liasonBase = new Connexion().ConnectPostgres();
-            liasonBase.Open();
+            using var connexion = new Connexion().ConnectPostgres();
+            await connexion.OpenAsync();
 
-            using var cmd = new NpgsqlCommand(sql, liasonBase);
+            // 🔐 Toujours en UTC
+            var now = DateTime.UtcNow;
+            var modifiableJusqua = now.AddMinutes(5);
+
+            using var cmd = new NpgsqlCommand(sql, connexion);
             cmd.Parameters.AddWithValue("@id_expediteur", message.Id_expediteur);
             cmd.Parameters.AddWithValue("@id_destinataire", (object?)message.Id_destinataire ?? DBNull.Value);
             cmd.Parameters.AddWithValue("@id_groupe_discussion", (object?)message.Id_groupe_discussion ?? DBNull.Value);
-            cmd.Parameters.AddWithValue("@contenu", message.Contenu);
-            cmd.Parameters.AddWithValue("@date_envoie", message.Date_envoie);
+            cmd.Parameters.AddWithValue("@contenu", message.Contenu ?? "");
+            cmd.Parameters.AddWithValue("@date_envoie", now);
             cmd.Parameters.AddWithValue("@id_status_msg", message.Id_status_msg);
 
             if (message.Id_espace_travail.HasValue)
@@ -303,21 +325,21 @@ namespace MessagerieInterneAPI.Modules.Discussion
             else
                 cmd.Parameters.AddWithValue("@id_espace_travail", DBNull.Value);
 
-            // On calcule la limite de modification
-            var modifiableJusqua = message.Date_envoie.AddMinutes(_editDelayMinutes);
             cmd.Parameters.AddWithValue("@modifiable_jusqua", modifiableJusqua);
 
-            // Pas encore modifié
-            cmd.Parameters.AddWithValue("@date_modification", DBNull.Value);
+            using var reader = await cmd.ExecuteReaderAsync();
 
-            var id = await cmd.ExecuteScalarAsync();
-            message.Id_message = Convert.ToInt32(id);
-
-            // On renvoie aussi la date limite
-            message.Modifiable_jusqua = modifiableJusqua;
+            if (await reader.ReadAsync())
+            {
+                message.Id_message = reader.GetInt32(reader.GetOrdinal("id_message"));
+                message.Date_envoie = reader.GetDateTime(reader.GetOrdinal("date_envoie"));
+                message.Modifiable_jusqua = reader.GetDateTime(reader.GetOrdinal("modifiable_jusqua"));
+            }
 
             return message;
         }
+
+
 
 
 
@@ -1185,11 +1207,12 @@ namespace MessagerieInterneAPI.Modules.Discussion
             return await _context.Message.FindAsync(idMessage);
         }
 
-        public async Task UpdateMessageContent(int idMessage, string newContent)
+        public async Task UpdateMessageContent(int idMessage, string newContent, int idStatus)
         {
             const string sql = @"
                 UPDATE message
                 SET contenu = @contenu,
+                id_status_msg = @id_status_msg,
                     date_modification = @date_modification
                 WHERE id_message = @id_message
             ";
@@ -1199,6 +1222,7 @@ namespace MessagerieInterneAPI.Modules.Discussion
 
             using var cmd = new NpgsqlCommand(sql, connect);
             cmd.Parameters.AddWithValue("@contenu", newContent);
+            cmd.Parameters.AddWithValue("@id_status_msg", idStatus); // statut modifié
             cmd.Parameters.AddWithValue("@date_modification", DateTime.UtcNow);
             cmd.Parameters.AddWithValue("@id_message", idMessage);
 
@@ -1236,6 +1260,139 @@ namespace MessagerieInterneAPI.Modules.Discussion
             return null;
         }
 
+        public async Task SupprimerMessageAsync(int idMessage)
+        {
+            const string sql = @"
+                UPDATE message
+                SET id_status_msg = 5,
+                    date_modification = @date_modification
+                WHERE id_message = @id_message
+            ";
+
+            using var connect = new Connexion().ConnectPostgres();
+            connect.Open();
+
+            using var cmd = new NpgsqlCommand(sql, connect);
+            cmd.Parameters.AddWithValue("@id_message", idMessage);
+            cmd.Parameters.AddWithValue("@date_modification", DateTime.UtcNow);
+
+            await cmd.ExecuteNonQueryAsync();
+        }
+
+        public async Task<IEnumerable<MessageModel>> SearchMessages(
+            int exp,
+            int dest,
+            string type,
+            string search
+            )
+        {
+            string sql;
+
+            if (type == "groupe")
+            {
+                sql = @"SELECT 
+                    v.*, 
+                    EXISTS (
+                        SELECT 1 
+                        FROM message_utilisateur_statut mus 
+                        WHERE mus.id_message = v.id_message 
+                        AND mus.id_utilisateur != @userId
+                        AND mus.id_status_msg = 3
+                    )::boolean AS est_lu,
+                    ARRAY(
+                        SELECT u.prenom::text
+                        FROM message_utilisateur_statut mus
+                        JOIN utilisateur u ON u.id_utilisateur = mus.id_utilisateur
+                        WHERE mus.id_message = v.id_message 
+                        AND mus.id_status_msg = 3
+                    )::text[] AS liste_utilisateur_vu
+                FROM v_utilisateur_message v
+                WHERE v.id_groupe_discussion = @id
+                AND (
+    COALESCE(v.contenu, '') ILIKE @search
+ OR COALESCE(v.nom_original, '') ILIKE @search
+)
+
+                ORDER BY v.id_message ASC;
+                ";
+            }
+            else if (type == "prive")
+            {
+                sql = @"SELECT 
+                    v.*,
+                    EXISTS (
+                        SELECT 1 
+                        FROM message_utilisateur_statut mus 
+                        WHERE mus.id_message = v.id_message 
+                        AND mus.id_utilisateur = @dest 
+                        AND mus.id_status_msg = 3
+                    )::boolean AS est_lu
+                FROM v_utilisateur_message v
+                WHERE 
+                    (
+                        (v.id_expediteur = @userId AND v.id_destinataire = @id)
+                    OR (v.id_expediteur = @id AND v.id_destinataire = @userId)
+                    )
+                AND (
+    COALESCE(v.contenu, '') ILIKE @search
+ OR COALESCE(v.nom_original, '') ILIKE @search
+)
+
+                ORDER BY v.id_message ASC;
+                ";
+            }
+            else
+            {
+                throw new ArgumentException("Type de discussion inconnu");
+            }
+
+            using var conn = new Connexion().ConnectPostgres();
+            await conn.OpenAsync();
+
+            using var cmd = new NpgsqlCommand(sql, conn);
+            cmd.Parameters.AddWithValue("@id", dest);
+            cmd.Parameters.AddWithValue("@userId", exp);
+            cmd.Parameters.AddWithValue("@search", $"%{search}%");
+
+            if (type == "prive")
+                cmd.Parameters.AddWithValue("@dest", dest);
+
+            var messages = new List<MessageModel>();
+
+            using var reader = await cmd.ExecuteReaderAsync();
+            while (await reader.ReadAsync())
+            {
+                var msg = new MessageModel
+                {
+                    Id_message = reader.GetInt32(0),
+                    Id_expediteur = reader.GetInt32(1),
+                    Nom_expediteur = reader.GetString(2),
+                    Id_destinataire = reader.IsDBNull(3) ? null : reader.GetInt32(3),
+                    Id_groupe_discussion = reader.IsDBNull(4) ? null : reader.GetInt32(4),
+                    Contenu = reader.GetString(5),
+                    Date_envoie = reader.GetDateTime(6),
+                    Id_status_msg = reader.GetInt32(7),
+                    Id_piece_jointe = reader.IsDBNull(8) ? 0 : reader.GetInt32(8),
+                    Chemin = reader.IsDBNull(9) ? null : reader.GetString(9),
+                    Nom_original = reader.IsDBNull(10) ? null : reader.GetString(10),
+                    Id_espace_travail = reader.IsDBNull(11) ? null : reader.GetInt32(11),
+                    Date_modification = reader.IsDBNull(12) ? null : reader.GetDateTime(12),
+                    Modifiable_jusqua = reader.IsDBNull(13) ? null : reader.GetDateTime(13),
+                    Est_lu = reader.GetBoolean(14)
+                };
+
+                if (type == "groupe")
+                {
+                    msg.Liste_utilisateur_vu = !reader.IsDBNull(15)
+                        ? reader.GetFieldValue<string[]>(15).ToList()
+                        : new List<string>();
+                }
+
+                messages.Add(msg);
+            }
+
+            return messages;
+        }
 
 
 

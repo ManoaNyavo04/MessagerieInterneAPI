@@ -89,11 +89,14 @@ namespace MessagerieInterneAPI
                     id_destinataire = idDest,
                     id_groupe_discussion = idGroupe,
                     contenu = message,
-                    date_envoie = DateTime.UtcNow.ToString("o"),
+                    date_envoie = insertedMessage.Date_envoie.ToString("o"),
+                    id_status_msg = 1,
+                    modifiable_jusqua = insertedMessage.Modifiable_jusqua?.ToString("o"),
                     est_lu = false,
                     nom_fichier = nomFichier,
                     chemin_fichier = cheminFichier
                 };
+
 
                 if (diffuser)
                 {
@@ -191,7 +194,7 @@ namespace MessagerieInterneAPI
                     throw new Exception("Délai de modification dépassé.");
 
                 // 3️⃣ Mise à jour en base
-                await _messageService.UpdateMessageContent(idMessage, newContent);
+                await _messageService.UpdateMessageContent(idMessage, newContent, 6);
 
                 // 4️⃣ Recharger message après update
                 var updatedMsg = await _messageService.GetMessageById(db, idMessage);
@@ -207,6 +210,7 @@ namespace MessagerieInterneAPI
                     id_groupe_discussion = updatedMsg.Id_groupe_discussion,
                     contenu = updatedMsg.Contenu,
                     date_envoie = updatedMsg.Date_envoie.ToString("o"),
+                    Id_status_msg = 6, // statuts modifié
                     date_modification = updatedMsg.Date_modification?.ToString("o"),
                     est_lu = false,
                     nom_fichier = updatedMsg.Nom_original,

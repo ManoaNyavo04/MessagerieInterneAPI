@@ -22,6 +22,7 @@ namespace MessagerieInterneAPI.Data
         public DbSet<UtilisateurEspaceTravailView> UtilisateurEspaceTravailView { get; set; }
         public DbSet<PoleEspaceTravailView> PoleEspaceTravailView { get; set; }
         public DbSet<PieceJointModel> PieceJoint { get; set; }
+        public DbSet<MessageTableModel> MessageTable { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {

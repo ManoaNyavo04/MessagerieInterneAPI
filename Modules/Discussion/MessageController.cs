@@ -94,6 +94,28 @@ namespace MessagerieInterneAPI.Modules.Discussion
             return Ok(messages);
         }
 
+        [Authorize]
+        [HttpGet("searchMessages")]
+        public async Task<IActionResult> SearchMessages(int targetId, string type, string content)
+        {
+            var idUtilisateurClaim = User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier);
+            if (idUtilisateurClaim == null) return Unauthorized();
+
+            int idUtilisateur = int.Parse(idUtilisateurClaim.Value);
+            Console.WriteLine("id ve hitany (message zone): " + idUtilisateur);
+
+            Console.WriteLine($"🔎 API /messages → targetId: {targetId}, type: {type}");
+
+            var messages = await _service.SearchMessages(idUtilisateur, targetId, type, content);
+
+            /*List<MessageModel> messages = type == "groupe"
+                ? _service.GetMessagesByGroupId(connexion.ConnectPostgres(), targetId)
+                : _service.GetIndividualMessage(connexion.ConnectPostgres(), idUtilisateur, targetId);*/
+            Console.WriteLine("tafiditra??");
+
+            return Ok(messages);
+        }
+
         [HttpPost("demarrerDiscussion")]
         public async Task<IActionResult> CreateNewDiscussion([FromBody] DiscussionModel model)
         {
@@ -176,28 +198,19 @@ namespace MessagerieInterneAPI.Modules.Discussion
             return Ok(results);
         }
 
-        [HttpPut("modifier-message/{id}")]
+        [HttpPut("modifier-message")]
         public async Task<IActionResult> ModifierMessage(int id, [FromBody] UpdateMessageDTO dto)
         {
-            var message = await _context.Message.FindAsync(id);
-            if (message == null)
-                return NotFound("Message introuvable");
+             await _service.UpdateMessageContent(dto.Id_message, dto.NouveauContenu, 6);
+             return Ok(new { success = true, message = "Message modifié" });
+        }
 
-            // Vérifier que c'est bien l'expéditeur
-            if (message.Id_expediteur != dto.IdUtilisateur)
-                return Unauthorized("Vous ne pouvez modifier que vos propres messages");
+        [HttpPut("delete-message/{id}")]
+        public async Task<IActionResult> DeleteMessage(int id)
+        {
+            await _service.SupprimerMessageAsync(id);
 
-            // Vérifier que le délai n'est pas dépassé
-            if (message.Modifiable_jusqua < DateTime.UtcNow)
-                return BadRequest("Le délai de modification est dépassé");
-
-            // Effectuer la modification
-            message.Contenu = dto.NouveauContenu;
-            message.Date_modification = DateTime.UtcNow;
-
-            await _context.SaveChangesAsync();
-
-            return Ok(new { success = true });
+            return Ok("Message supprimé");
         }
 
 

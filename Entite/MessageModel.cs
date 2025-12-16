@@ -38,10 +38,10 @@ namespace MessagerieInterneAPI
         [NotMapped]
         public List<string> Liste_utilisateur_vu { get; set; }
 
-        [NotMapped]
+        [Column("modifiable_jusqua")]
         public DateTime? Modifiable_jusqua { get; set; }
 
-        [NotMapped]
+        [Column("date_modification")]
         public DateTime? Date_modification { get; set; }
 
 
