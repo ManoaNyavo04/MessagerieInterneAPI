@@ -4,15 +4,20 @@
     {
         public int Id { get; set; }
         public string Nom { get; set; }
-        public string Type { get; set; } // "groupe" or "prive"
+        public string Type { get; set; } // "groupe" | "prive"
+
+        // ✅ NOUVEAU
+        public string? Matricule { get; set; }
 
         public DiscussionModel() { }
 
-        public DiscussionModel(int idGrpOrUser, string nomGrpOrUer, string type)
+        public DiscussionModel(int id, string nom, string type, string? matricule = null)
         {
-            Id = idGrpOrUser;
-            Nom = nomGrpOrUer;
-            Type = type; // "groupe" or "prive"
+            Id = id;
+            Nom = nom;
+            Type = type;
+            Matricule = matricule;
         }
     }
+
 }

@@ -14,8 +14,16 @@ namespace MessagerieInterneAPI
         public int Id_expediteur { get; set; }
         [Column("nom_expediteur")]
         public string Nom_expediteur { get; set; }
+        [Column("matricule_expediteur")]
+        public string? Matricule_expediteur { get; set; }
+
         [Column("id_destinataire")]
         public int? Id_destinataire { get; set; }
+        [Column("nom_destinataire")]
+        public string Nom_destinataire { get; set; }
+        [Column("matricule_destinataire")]
+        public string? Matricule_destinataire { get; set; }
+
         [Column("id_groupe_discussion")]
         public int? Id_groupe_discussion { get; set; }
         [Column("contenu")]
@@ -39,10 +47,14 @@ namespace MessagerieInterneAPI
         public List<string> Liste_utilisateur_vu { get; set; }
 
         [Column("modifiable_jusqua")]
+
         public DateTime? Modifiable_jusqua { get; set; }
 
         [Column("date_modification")]
         public DateTime? Date_modification { get; set; }
+        [NotMapped]
+        public string? Matricule_autre { get; set; }
+
 
 
 

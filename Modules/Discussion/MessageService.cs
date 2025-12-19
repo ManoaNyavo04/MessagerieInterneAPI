@@ -24,101 +24,141 @@ namespace MessagerieInterneAPI.Modules.Discussion
         }
 
         public async Task<IEnumerable<MessageModel>> GetMessages(int exp, int dest, string type)
+{
+    string sql;
+
+    if (type == "groupe")
+    {
+        sql = @"
+        SELECT 
+            v.*, 
+            EXISTS (
+                SELECT 1 
+                FROM message_utilisateur_statut mus 
+                WHERE mus.id_message = v.id_message 
+                  AND mus.id_utilisateur != @userId
+                  AND mus.id_status_msg = 3
+            )::boolean AS est_lu,
+            ARRAY(
+                SELECT u.prenom::text
+                FROM message_utilisateur_statut mus
+                JOIN utilisateur u ON u.id_utilisateur = mus.id_utilisateur
+                WHERE mus.id_message = v.id_message 
+                  AND mus.id_status_msg = 3
+            )::text[] AS liste_utilisateur_vu
+        FROM v_utilisateur_message v
+        WHERE v.id_groupe_discussion = @id
+        ORDER BY v.id_message ASC";
+    }
+    else if (type == "prive")
+    {
+        sql = @"
+        SELECT 
+            v.*,
+            CASE 
+                WHEN v.id_expediteur = @userId 
+                    THEN v.matricule_destinataire
+                ELSE v.matricule_expediteur
+            END AS matricule_autre,
+            EXISTS (
+                SELECT 1 
+                FROM message_utilisateur_statut mus 
+                WHERE mus.id_message = v.id_message 
+                  AND mus.id_utilisateur = @dest 
+                  AND mus.id_status_msg = 3
+            )::boolean AS est_lu
+        FROM v_utilisateur_message v
+        WHERE 
+            (v.id_expediteur = @userId AND v.id_destinataire = @id)
+         OR (v.id_expediteur = @id AND v.id_destinataire = @userId)
+        ORDER BY v.id_message ASC";
+    }
+    else
+    {
+        throw new ArgumentException("Type de discussion inconnu");
+    }
+
+    using var conn = new Connexion().ConnectPostgres();
+    await conn.OpenAsync();
+
+    using var cmd = new NpgsqlCommand(sql, conn);
+    cmd.Parameters.AddWithValue("@id", dest);
+    cmd.Parameters.AddWithValue("@userId", exp);
+    if (type == "prive")
+        cmd.Parameters.AddWithValue("@dest", dest);
+
+    var messages = new List<MessageModel>();
+
+    using var reader = await cmd.ExecuteReaderAsync();
+
+    // Index communs (v.*)
+    int idxIdMessage = reader.GetOrdinal("id_message");
+    int idxIdExp = reader.GetOrdinal("id_expediteur");
+    int idxNomExp = reader.GetOrdinal("nom_expediteur");
+    int idxMatExp = reader.GetOrdinal("matricule_expediteur");
+    int idxIdDest = reader.GetOrdinal("id_destinataire");
+    int idxNomDest = reader.GetOrdinal("nom_destinataire");
+    int idxIdGroupe = reader.GetOrdinal("id_groupe_discussion");
+    int idxContenu = reader.GetOrdinal("contenu");
+    int idxDate = reader.GetOrdinal("date_envoie");
+    int idxStatus = reader.GetOrdinal("id_status_msg");
+    int idxIdPJ = reader.GetOrdinal("id_piece_joint");
+    int idxChemin = reader.GetOrdinal("chemin");
+    int idxNomOriginal = reader.GetOrdinal("nom_original");
+    int idxEspace = reader.GetOrdinal("id_espace_travail");
+    int idxDateModif = reader.GetOrdinal("date_modification");
+    int idxModifiable = reader.GetOrdinal("modifiable_jusqua");
+
+    // Index spécifiques
+    int idxEstLu = reader.GetOrdinal("est_lu");
+    int idxMatAutre = type == "prive" ? reader.GetOrdinal("matricule_autre") : -1;
+    int idxListeVu = type == "groupe" ? reader.GetOrdinal("liste_utilisateur_vu") : -1;
+
+    while (await reader.ReadAsync())
+    {
+        var msg = new MessageModel
         {
-            string sql;
+            Id_message = reader.GetInt32(idxIdMessage),
+            Id_expediteur = reader.GetInt32(idxIdExp),
+            Nom_expediteur = reader.GetString(idxNomExp),
+            Matricule_expediteur = reader.GetString(idxMatExp),
 
-            if (type == "groupe")
-            {
-                sql = @"
-            SELECT 
-                v.*, 
-                EXISTS (
-                    SELECT 1 
-                    FROM message_utilisateur_statut mus 
-                    WHERE mus.id_message = v.id_message 
-                      AND mus.id_utilisateur != @userId
-                      AND mus.id_status_msg = 3
-                )::boolean AS est_lu,
-                ARRAY(
-                    SELECT u.prenom::text
-                    FROM message_utilisateur_statut mus
-                    JOIN utilisateur u ON u.id_utilisateur = mus.id_utilisateur
-                    WHERE mus.id_message = v.id_message AND mus.id_status_msg = 3
-                )::text[] AS liste_utilisateur_vu
-            FROM v_utilisateur_message v
-            WHERE v.id_groupe_discussion = @id
-            ORDER BY v.id_message ASC";
-            }
-            else if (type == "prive")
-            {
-                sql = @"
-            SELECT 
-                v.*,
-                EXISTS (
-                    SELECT 1 
-                    FROM message_utilisateur_statut mus 
-                    WHERE mus.id_message = v.id_message 
-                      AND mus.id_utilisateur = @dest 
-                      AND mus.id_status_msg = 3
-                )::boolean AS est_lu
-            FROM v_utilisateur_message v
-            WHERE 
-                (v.id_expediteur = @userId AND v.id_destinataire = @id)
-             OR (v.id_expediteur = @id AND v.id_destinataire = @userId)
-            ORDER BY v.id_message ASC";
-            }
-            else
-            {
-                throw new ArgumentException("Type de discussion inconnu");
-            }
+            Id_destinataire = reader.IsDBNull(idxIdDest) ? null : reader.GetInt32(idxIdDest),
+            Nom_destinataire = reader.IsDBNull(idxNomDest) ? null : reader.GetString(idxNomDest),
 
-            using var conn = new Connexion().ConnectPostgres();
-            await conn.OpenAsync();
+            Id_groupe_discussion = reader.IsDBNull(idxIdGroupe) ? null : reader.GetInt32(idxIdGroupe),
+            Contenu = reader.GetString(idxContenu),
+            Date_envoie = reader.GetDateTime(idxDate),
+            Id_status_msg = reader.GetInt32(idxStatus),
 
-            using var cmd = new NpgsqlCommand(sql, conn);
-            cmd.Parameters.AddWithValue("@id", dest);
-            cmd.Parameters.AddWithValue("@userId", exp);
-            if (type == "prive")
-                cmd.Parameters.AddWithValue("@dest", dest);  // pour la sous-requête EXISTS
+            Id_piece_jointe = reader.IsDBNull(idxIdPJ) ? null : reader.GetInt32(idxIdPJ),
+            Chemin = reader.IsDBNull(idxChemin) ? null : reader.GetString(idxChemin),
+            Nom_original = reader.IsDBNull(idxNomOriginal) ? null : reader.GetString(idxNomOriginal),
+            Id_espace_travail = reader.IsDBNull(idxEspace) ? null : reader.GetInt32(idxEspace),
 
-            var messages = new List<MessageModel>();
-            using var reader = await cmd.ExecuteReaderAsync();
-            while (await reader.ReadAsync())
-            {
-                var msg = new MessageModel
-                {
-                    Id_message = reader.GetInt32(0),
-                    Id_expediteur = reader.GetInt32(1),
-                    Nom_expediteur = reader.GetString(2),
-                    Id_destinataire = reader.IsDBNull(3) ? null : reader.GetInt32(3),
-                    Id_groupe_discussion = reader.IsDBNull(4) ? null : reader.GetInt32(4),
-                    Contenu = reader.GetString(5),
-                    Date_envoie = reader.GetDateTime(6),
-                    Id_status_msg = reader.GetInt32(7),
-                    Id_piece_jointe = reader.IsDBNull(8) ? 0 : reader.GetInt32(8),
-                    Chemin = reader.IsDBNull(9) ? null : reader.GetString(9),
-                    Nom_original = reader.IsDBNull(10) ? null : reader.GetString(10),
-                    Id_espace_travail = reader.IsDBNull(11) ? null : reader.GetInt32(11),
+            Date_modification = reader.IsDBNull(idxDateModif) ? null : reader.GetDateTime(idxDateModif),
+            Modifiable_jusqua = reader.IsDBNull(idxModifiable) ? null : reader.GetDateTime(idxModifiable),
 
-                    Date_modification = reader.IsDBNull(12) ? null : reader.GetDateTime(12),
-                    Modifiable_jusqua = reader.IsDBNull(13) ? null : reader.GetDateTime(13),
+            Est_lu = reader.GetBoolean(idxEstLu)
+        };
 
-                    Est_lu = reader.GetBoolean(14)
-                };
-
-                if (type == "groupe")
-                {
-                    msg.Liste_utilisateur_vu = !reader.IsDBNull(15)
-                    ? reader.GetFieldValue<string[]>(15).ToList()
-                    : new List<string>();
-                }
-
-                messages.Add(msg);
-            }
-
-
-            return messages;
+        if (type == "prive")
+        {
+            msg.Matricule_autre = reader.GetString(idxMatAutre);
         }
+
+        if (type == "groupe")
+        {
+            msg.Liste_utilisateur_vu = reader.IsDBNull(idxListeVu)
+                ? new List<string>()
+                : reader.GetFieldValue<string[]>(idxListeVu).ToList();
+        }
+
+        messages.Add(msg);
+    }
+
+    return messages;
+}
 
 
 
@@ -471,25 +511,35 @@ namespace MessagerieInterneAPI.Modules.Discussion
         {
             List<DiscussionModel> discussions = new List<DiscussionModel>();
             string sql = @"
-    SELECT DISTINCT ON (id_autre_utilisateur)
-        id_autre_utilisateur,
-        nom_autre_utilisateur,
-        'prive' AS type
-    FROM (
-        SELECT 
-            CASE 
-                WHEN id_expediteur = @userId THEN id_destinataire
-                ELSE id_expediteur
-            END AS id_autre_utilisateur,
+SELECT DISTINCT ON (id_autre_utilisateur)
+    id_autre_utilisateur AS id,
+    nom_autre_utilisateur AS nom,
+    'prive' AS type,
+    matricule_autre AS matricule
+FROM (
+    SELECT 
+        CASE 
+            WHEN id_expediteur = @userId THEN id_destinataire_user
+            ELSE id_expediteur_user
+        END AS id_autre_utilisateur,
 
-            CASE 
-                WHEN id_expediteur = @userId THEN nom_destinataire
-                ELSE nom_expediteur
-            END AS nom_autre_utilisateur
-        FROM v_discussions_individuelles
-        WHERE (id_expediteur = @userId OR id_destinataire = @userId)
-    ) AS sub
-    ORDER BY id_autre_utilisateur;
+        CASE 
+            WHEN id_expediteur = @userId THEN nom_destinataire
+            ELSE nom_expediteur
+        END AS nom_autre_utilisateur,
+
+        CASE 
+            WHEN id_expediteur = @userId THEN matricule_destinataire
+            ELSE matricule_expediteur
+        END AS matricule_autre
+
+    FROM v_discussions_individuelles
+    WHERE id_expediteur = @userId 
+       OR id_destinataire = @userId
+) sub
+ORDER BY id_autre_utilisateur;
+
+
 ";
 
 
@@ -512,14 +562,17 @@ namespace MessagerieInterneAPI.Modules.Discussion
 
                 while (reader.Read())
                 {
-                    DiscussionModel discussion = new DiscussionModel
+                    discussions.Add(new DiscussionModel
                     {
                         Id = reader.GetInt32(0),
                         Nom = reader.GetString(1),
-                        Type = reader.GetString(2)
-                    };
-                    discussions.Add(discussion);
+
+                        Type = reader.GetString(2),
+                        Matricule = reader.IsDBNull(3) ? null : reader.GetString(3),
+                    });
                 }
+
+
             }
             catch (Exception e)
             {
@@ -1280,120 +1333,198 @@ namespace MessagerieInterneAPI.Modules.Discussion
         }
 
         public async Task<IEnumerable<MessageModel>> SearchMessages(
-            int exp,
-            int dest,
-            string type,
-            string search
-            )
+    int exp,
+    int dest,
+    string type,
+    string search
+)
+{
+    string sql;
+
+    if (type == "groupe")
+    {
+        sql = @"
+        SELECT
+            v.id_message,
+            v.id_expediteur,
+            v.nom_expediteur,
+            v.matricule_expediteur,
+            v.id_destinataire,
+            v.nom_destinataire,
+            v.matricule_destinataire,
+            v.id_groupe_discussion,
+            v.contenu,
+            v.date_envoie,
+            v.id_status_msg,
+            v.id_piece_joint,
+            v.chemin,
+            v.nom_original,
+            v.id_espace_travail,
+            v.date_modification,
+            v.modifiable_jusqua,
+
+            EXISTS (
+                SELECT 1
+                FROM message_utilisateur_statut mus
+                WHERE mus.id_message = v.id_message
+                  AND mus.id_utilisateur != @userId
+                  AND mus.id_status_msg = 3
+            ) AS est_lu,
+
+            ARRAY(
+                SELECT u.prenom::text
+                FROM message_utilisateur_statut mus
+                JOIN utilisateur u ON u.id_utilisateur = mus.id_utilisateur
+                WHERE mus.id_message = v.id_message
+                  AND mus.id_status_msg = 3
+            ) AS liste_utilisateur_vu
+        FROM v_utilisateur_message v
+        WHERE v.id_groupe_discussion = @id
+          AND (
+                COALESCE(v.contenu, '') ILIKE @search
+             OR COALESCE(v.nom_original, '') ILIKE @search
+          )
+        ORDER BY v.id_message ASC;";
+    }
+    else if (type == "prive")
+    {
+        sql = @"
+        SELECT
+            v.id_message,
+            v.id_expediteur,
+            v.nom_expediteur,
+            v.matricule_expediteur,
+            v.id_destinataire,
+            v.nom_destinataire,
+            v.matricule_destinataire,
+            v.id_groupe_discussion,
+            v.contenu,
+            v.date_envoie,
+            v.id_status_msg,
+            v.id_piece_joint,
+            v.chemin,
+            v.nom_original,
+            v.id_espace_travail,
+            v.date_modification,
+            v.modifiable_jusqua,
+
+            EXISTS (
+                SELECT 1
+                FROM message_utilisateur_statut mus
+                WHERE mus.id_message = v.id_message
+                  AND mus.id_utilisateur = @dest
+                  AND mus.id_status_msg = 3
+            ) AS est_lu
+        FROM v_utilisateur_message v
+        WHERE (
+                (v.id_expediteur = @userId AND v.id_destinataire = @id)
+             OR (v.id_expediteur = @id AND v.id_destinataire = @userId)
+              )
+          AND (
+                COALESCE(v.contenu, '') ILIKE @search
+             OR COALESCE(v.nom_original, '') ILIKE @search
+          )
+        ORDER BY v.id_message ASC;";
+    }
+    else
+    {
+        throw new ArgumentException("Type de discussion inconnu");
+    }
+
+    using var conn = new Connexion().ConnectPostgres();
+    await conn.OpenAsync();
+
+    using var cmd = new NpgsqlCommand(sql, conn);
+    cmd.Parameters.AddWithValue("@id", dest);
+    cmd.Parameters.AddWithValue("@userId", exp);
+    cmd.Parameters.AddWithValue("@search", $"%{search}%");
+
+    if (type == "prive")
+        cmd.Parameters.AddWithValue("@dest", dest);
+
+    var messages = new List<MessageModel>();
+
+    using var reader = await cmd.ExecuteReaderAsync();
+    while (await reader.ReadAsync())
+    {
+        var msg = new MessageModel
         {
-            string sql;
+            Id_message = reader.GetInt32(reader.GetOrdinal("id_message")),
+            Id_expediteur = reader.GetInt32(reader.GetOrdinal("id_expediteur")),
 
-            if (type == "groupe")
-            {
-                sql = @"SELECT 
-                    v.*, 
-                    EXISTS (
-                        SELECT 1 
-                        FROM message_utilisateur_statut mus 
-                        WHERE mus.id_message = v.id_message 
-                        AND mus.id_utilisateur != @userId
-                        AND mus.id_status_msg = 3
-                    )::boolean AS est_lu,
-                    ARRAY(
-                        SELECT u.prenom::text
-                        FROM message_utilisateur_statut mus
-                        JOIN utilisateur u ON u.id_utilisateur = mus.id_utilisateur
-                        WHERE mus.id_message = v.id_message 
-                        AND mus.id_status_msg = 3
-                    )::text[] AS liste_utilisateur_vu
-                FROM v_utilisateur_message v
-                WHERE v.id_groupe_discussion = @id
-                AND (
-    COALESCE(v.contenu, '') ILIKE @search
- OR COALESCE(v.nom_original, '') ILIKE @search
-)
+            Nom_expediteur = reader.IsDBNull(reader.GetOrdinal("nom_expediteur"))
+                ? null
+                : reader.GetString(reader.GetOrdinal("nom_expediteur")),
 
-                ORDER BY v.id_message ASC;
-                ";
-            }
-            else if (type == "prive")
-            {
-                sql = @"SELECT 
-                    v.*,
-                    EXISTS (
-                        SELECT 1 
-                        FROM message_utilisateur_statut mus 
-                        WHERE mus.id_message = v.id_message 
-                        AND mus.id_utilisateur = @dest 
-                        AND mus.id_status_msg = 3
-                    )::boolean AS est_lu
-                FROM v_utilisateur_message v
-                WHERE 
-                    (
-                        (v.id_expediteur = @userId AND v.id_destinataire = @id)
-                    OR (v.id_expediteur = @id AND v.id_destinataire = @userId)
-                    )
-                AND (
-    COALESCE(v.contenu, '') ILIKE @search
- OR COALESCE(v.nom_original, '') ILIKE @search
-)
+            Matricule_expediteur = reader.IsDBNull(reader.GetOrdinal("matricule_expediteur"))
+                ? null
+                : reader.GetString(reader.GetOrdinal("matricule_expediteur")),
 
-                ORDER BY v.id_message ASC;
-                ";
-            }
-            else
-            {
-                throw new ArgumentException("Type de discussion inconnu");
-            }
+            Id_destinataire = reader.IsDBNull(reader.GetOrdinal("id_destinataire"))
+                ? null
+                : reader.GetInt32(reader.GetOrdinal("id_destinataire")),
 
-            using var conn = new Connexion().ConnectPostgres();
-            await conn.OpenAsync();
+            Nom_destinataire = reader.IsDBNull(reader.GetOrdinal("nom_destinataire"))
+                ? null
+                : reader.GetString(reader.GetOrdinal("nom_destinataire")),
 
-            using var cmd = new NpgsqlCommand(sql, conn);
-            cmd.Parameters.AddWithValue("@id", dest);
-            cmd.Parameters.AddWithValue("@userId", exp);
-            cmd.Parameters.AddWithValue("@search", $"%{search}%");
+            Matricule_destinataire = reader.IsDBNull(reader.GetOrdinal("matricule_destinataire"))
+                ? null
+                : reader.GetString(reader.GetOrdinal("matricule_destinataire")),
 
-            if (type == "prive")
-                cmd.Parameters.AddWithValue("@dest", dest);
+            Id_groupe_discussion = reader.IsDBNull(reader.GetOrdinal("id_groupe_discussion"))
+                ? null
+                : reader.GetInt32(reader.GetOrdinal("id_groupe_discussion")),
 
-            var messages = new List<MessageModel>();
+            Contenu = reader.IsDBNull(reader.GetOrdinal("contenu"))
+                ? null
+                : reader.GetString(reader.GetOrdinal("contenu")),
 
-            using var reader = await cmd.ExecuteReaderAsync();
-            while (await reader.ReadAsync())
-            {
-                var msg = new MessageModel
-                {
-                    Id_message = reader.GetInt32(0),
-                    Id_expediteur = reader.GetInt32(1),
-                    Nom_expediteur = reader.GetString(2),
-                    Id_destinataire = reader.IsDBNull(3) ? null : reader.GetInt32(3),
-                    Id_groupe_discussion = reader.IsDBNull(4) ? null : reader.GetInt32(4),
-                    Contenu = reader.GetString(5),
-                    Date_envoie = reader.GetDateTime(6),
-                    Id_status_msg = reader.GetInt32(7),
-                    Id_piece_jointe = reader.IsDBNull(8) ? 0 : reader.GetInt32(8),
-                    Chemin = reader.IsDBNull(9) ? null : reader.GetString(9),
-                    Nom_original = reader.IsDBNull(10) ? null : reader.GetString(10),
-                    Id_espace_travail = reader.IsDBNull(11) ? null : reader.GetInt32(11),
-                    Date_modification = reader.IsDBNull(12) ? null : reader.GetDateTime(12),
-                    Modifiable_jusqua = reader.IsDBNull(13) ? null : reader.GetDateTime(13),
-                    Est_lu = reader.GetBoolean(14)
-                };
+            Date_envoie = reader.GetDateTime(reader.GetOrdinal("date_envoie")),
+            Id_status_msg = reader.GetInt32(reader.GetOrdinal("id_status_msg")),
 
-                if (type == "groupe")
-                {
-                    msg.Liste_utilisateur_vu = !reader.IsDBNull(15)
-                        ? reader.GetFieldValue<string[]>(15).ToList()
-                        : new List<string>();
-                }
+            Id_piece_jointe = reader.IsDBNull(reader.GetOrdinal("id_piece_joint"))
+                ? null
+                : reader.GetInt32(reader.GetOrdinal("id_piece_joint")),
 
-                messages.Add(msg);
-            }
+            Chemin = reader.IsDBNull(reader.GetOrdinal("chemin"))
+                ? null
+                : reader.GetString(reader.GetOrdinal("chemin")),
 
-            return messages;
+            Nom_original = reader.IsDBNull(reader.GetOrdinal("nom_original"))
+                ? null
+                : reader.GetString(reader.GetOrdinal("nom_original")),
+
+            Id_espace_travail = reader.IsDBNull(reader.GetOrdinal("id_espace_travail"))
+                ? null
+                : reader.GetInt32(reader.GetOrdinal("id_espace_travail")),
+
+            Date_modification = reader.IsDBNull(reader.GetOrdinal("date_modification"))
+                ? null
+                : reader.GetDateTime(reader.GetOrdinal("date_modification")),
+
+            Modifiable_jusqua = reader.IsDBNull(reader.GetOrdinal("modifiable_jusqua"))
+                ? null
+                : reader.GetDateTime(reader.GetOrdinal("modifiable_jusqua")),
+
+            Est_lu = reader.GetBoolean(reader.GetOrdinal("est_lu"))
+        };
+
+        if (type == "groupe")
+        {
+            msg.Liste_utilisateur_vu =
+                reader.IsDBNull(reader.GetOrdinal("liste_utilisateur_vu"))
+                ? new List<string>()
+                : reader.GetFieldValue<string[]>(
+                    reader.GetOrdinal("liste_utilisateur_vu")
+                  ).ToList();
         }
 
+        messages.Add(msg);
+    }
+
+    return messages;
+}
 
 
 

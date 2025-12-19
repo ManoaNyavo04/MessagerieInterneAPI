@@ -36,6 +36,7 @@ CREATE VIEW v_discussions_individuelles AS
         u.id_utilisateur AS id_utilisateur,
         u.nom || ' ' || u.prenom AS nom_expediteur,
         u.nom || ' ' || u.prenom AS nom_destinataire,
+        u.matricule,
         m.id_expediteur,
         m.id_destinataire,
         'prive' AS type
@@ -45,42 +46,55 @@ CREATE VIEW v_discussions_individuelles AS
     WHERE m.id_groupe_discussion IS NULL;
 
 CREATE OR REPLACE VIEW v_discussions_individuelles AS
-    SELECT DISTINCT
-        e.id_utilisateur AS id_expediteur,
-        e.nom || ' ' || e.prenom AS nom_expediteur,
-        d.id_utilisateur AS id_destinataire,
-        d.nom || ' ' || d.prenom AS nom_destinataire,
-        m.contenu,
-        m.id_espace_travail,  -- ✅ ajouter cette colonne
-        'prive' AS type
-    FROM message m
-    JOIN utilisateur e ON e.id_utilisateur = m.id_expediteur
-    JOIN utilisateur d ON d.id_utilisateur = m.id_destinataire
-    WHERE m.id_groupe_discussion IS NULL;
+SELECT
+    m.id_message,
+    m.id_expediteur,
+    m.id_destinataire,
+
+    u_exp.id_utilisateur  AS id_expediteur_user,
+    u_exp.nom || ' ' || u_exp.prenom AS nom_expediteur,
+    u_exp.matricule AS matricule_expediteur,
+
+    u_dest.id_utilisateur AS id_destinataire_user,
+    u_dest.nom || ' ' || u_dest.prenom AS nom_destinataire,
+    u_dest.matricule AS matricule_destinataire
+
+FROM message m
+JOIN utilisateur u_exp  ON u_exp.id_utilisateur = m.id_expediteur
+JOIN utilisateur u_dest ON u_dest.id_utilisateur = m.id_destinataire
+WHERE m.id_groupe_discussion IS NULL;
 
 
 
-CREATE or REPLACE VIEW v_utilisateur_message AS (
-    select 
-        m.id_message,
-        m.id_expediteur,
-        u.nom || ' ' || u.prenom AS nom_expediteur,
-        m.id_destinataire,
-        m.id_groupe_discussion,
-        m.contenu,
-        m.date_envoie,
-        m.id_status_msg,
-        pj.id_piece_joint,
-        pj.chemin,
-        pj.nom_original,
-        m.id_espace_travail,
-        m.date_modification,
-        m.modifiable_jusqua
-    from message m 
-    join utilisateur u on u.id_utilisateur = m.id_expediteur 
-    left join piece_joint pj on pj.id_message = m.id_message
-    order by id_message desc
-); 
+CREATE OR REPLACE VIEW v_utilisateur_message AS
+SELECT 
+    m.id_message,
+    m.id_expediteur,
+
+    u_exp.nom || ' ' || u_exp.prenom AS nom_expediteur,
+    u_exp.matricule AS matricule_expediteur,
+
+    m.id_destinataire,
+    u_dest.nom || ' ' || u_dest.prenom AS nom_destinataire,
+    u_dest.matricule AS matricule_destinataire,
+
+    m.id_groupe_discussion,
+    m.contenu,
+    m.date_envoie,
+    m.id_status_msg,
+    pj.id_piece_joint,
+    pj.chemin,
+    pj.nom_original,
+    m.id_espace_travail,
+    m.date_modification,
+    m.modifiable_jusqua
+FROM message m
+JOIN utilisateur u_exp ON u_exp.id_utilisateur = m.id_expediteur
+LEFT JOIN utilisateur u_dest ON u_dest.id_utilisateur = m.id_destinataire
+LEFT JOIN piece_joint pj ON pj.id_message = m.id_message;
+
+
+
 
 CREATE or REPLACE VIEW v_piece_joint AS (
     select 
