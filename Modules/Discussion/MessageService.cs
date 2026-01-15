@@ -24,12 +24,12 @@ namespace MessagerieInterneAPI.Modules.Discussion
         }
 
         public async Task<IEnumerable<MessageModel>> GetMessages(int exp, int dest, string type)
-{
-    string sql;
+        {
+            string sql;
 
-    if (type == "groupe")
-    {
-        sql = @"
+            if (type == "groupe")
+            {
+                sql = @"
         SELECT 
             v.*, 
             EXISTS (
@@ -49,10 +49,10 @@ namespace MessagerieInterneAPI.Modules.Discussion
         FROM v_utilisateur_message v
         WHERE v.id_groupe_discussion = @id
         ORDER BY v.id_message ASC";
-    }
-    else if (type == "prive")
-    {
-        sql = @"
+            }
+            else if (type == "prive")
+            {
+                sql = @"
         SELECT 
             v.*,
             CASE 
@@ -72,93 +72,93 @@ namespace MessagerieInterneAPI.Modules.Discussion
             (v.id_expediteur = @userId AND v.id_destinataire = @id)
          OR (v.id_expediteur = @id AND v.id_destinataire = @userId)
         ORDER BY v.id_message ASC";
-    }
-    else
-    {
-        throw new ArgumentException("Type de discussion inconnu");
-    }
+            }
+            else
+            {
+                throw new ArgumentException("Type de discussion inconnu");
+            }
 
-    using var conn = new Connexion().ConnectPostgres();
-    await conn.OpenAsync();
+            using var conn = new Connexion().ConnectPostgres();
+            await conn.OpenAsync();
 
-    using var cmd = new NpgsqlCommand(sql, conn);
-    cmd.Parameters.AddWithValue("@id", dest);
-    cmd.Parameters.AddWithValue("@userId", exp);
-    if (type == "prive")
-        cmd.Parameters.AddWithValue("@dest", dest);
+            using var cmd = new NpgsqlCommand(sql, conn);
+            cmd.Parameters.AddWithValue("@id", dest);
+            cmd.Parameters.AddWithValue("@userId", exp);
+            if (type == "prive")
+                cmd.Parameters.AddWithValue("@dest", dest);
 
-    var messages = new List<MessageModel>();
+            var messages = new List<MessageModel>();
 
-    using var reader = await cmd.ExecuteReaderAsync();
+            using var reader = await cmd.ExecuteReaderAsync();
 
-    // Index communs (v.*)
-    int idxIdMessage = reader.GetOrdinal("id_message");
-    int idxIdExp = reader.GetOrdinal("id_expediteur");
-    int idxNomExp = reader.GetOrdinal("nom_expediteur");
-    int idxMatExp = reader.GetOrdinal("matricule_expediteur");
-    int idxIdDest = reader.GetOrdinal("id_destinataire");
-    int idxNomDest = reader.GetOrdinal("nom_destinataire");
-    int idxIdGroupe = reader.GetOrdinal("id_groupe_discussion");
-    int idxContenu = reader.GetOrdinal("contenu");
-    int idxDate = reader.GetOrdinal("date_envoie");
-    int idxStatus = reader.GetOrdinal("id_status_msg");
-    int idxIdPJ = reader.GetOrdinal("id_piece_joint");
-    int idxChemin = reader.GetOrdinal("chemin");
-    int idxNomOriginal = reader.GetOrdinal("nom_original");
-    int idxEspace = reader.GetOrdinal("id_espace_travail");
-    int idxDateModif = reader.GetOrdinal("date_modification");
-    int idxModifiable = reader.GetOrdinal("modifiable_jusqua");
+            // Index communs (v.*)
+            int idxIdMessage = reader.GetOrdinal("id_message");
+            int idxIdExp = reader.GetOrdinal("id_expediteur");
+            int idxNomExp = reader.GetOrdinal("nom_expediteur");
+            int idxMatExp = reader.GetOrdinal("matricule_expediteur");
+            int idxIdDest = reader.GetOrdinal("id_destinataire");
+            int idxNomDest = reader.GetOrdinal("nom_destinataire");
+            int idxIdGroupe = reader.GetOrdinal("id_groupe_discussion");
+            int idxContenu = reader.GetOrdinal("contenu");
+            int idxDate = reader.GetOrdinal("date_envoie");
+            int idxStatus = reader.GetOrdinal("id_status_msg");
+            int idxIdPJ = reader.GetOrdinal("id_piece_joint");
+            int idxChemin = reader.GetOrdinal("chemin");
+            int idxNomOriginal = reader.GetOrdinal("nom_original");
+            int idxEspace = reader.GetOrdinal("id_espace_travail");
+            int idxDateModif = reader.GetOrdinal("date_modification");
+            int idxModifiable = reader.GetOrdinal("modifiable_jusqua");
 
-    // Index spécifiques
-    int idxEstLu = reader.GetOrdinal("est_lu");
-    int idxMatAutre = type == "prive" ? reader.GetOrdinal("matricule_autre") : -1;
-    int idxListeVu = type == "groupe" ? reader.GetOrdinal("liste_utilisateur_vu") : -1;
+            // Index spécifiques
+            int idxEstLu = reader.GetOrdinal("est_lu");
+            int idxMatAutre = type == "prive" ? reader.GetOrdinal("matricule_autre") : -1;
+            int idxListeVu = type == "groupe" ? reader.GetOrdinal("liste_utilisateur_vu") : -1;
 
-    while (await reader.ReadAsync())
-    {
-        var msg = new MessageModel
-        {
-            Id_message = reader.GetInt32(idxIdMessage),
-            Id_expediteur = reader.GetInt32(idxIdExp),
-            Nom_expediteur = reader.GetString(idxNomExp),
-            Matricule_expediteur = reader.GetString(idxMatExp),
+            while (await reader.ReadAsync())
+            {
+                var msg = new MessageModel
+                {
+                    Id_message = reader.GetInt32(idxIdMessage),
+                    Id_expediteur = reader.GetInt32(idxIdExp),
+                    Nom_expediteur = reader.GetString(idxNomExp),
+                    Matricule_expediteur = reader.GetString(idxMatExp),
 
-            Id_destinataire = reader.IsDBNull(idxIdDest) ? null : reader.GetInt32(idxIdDest),
-            Nom_destinataire = reader.IsDBNull(idxNomDest) ? null : reader.GetString(idxNomDest),
+                    Id_destinataire = reader.IsDBNull(idxIdDest) ? null : reader.GetInt32(idxIdDest),
+                    Nom_destinataire = reader.IsDBNull(idxNomDest) ? null : reader.GetString(idxNomDest),
 
-            Id_groupe_discussion = reader.IsDBNull(idxIdGroupe) ? null : reader.GetInt32(idxIdGroupe),
-            Contenu = reader.GetString(idxContenu),
-            Date_envoie = reader.GetDateTime(idxDate),
-            Id_status_msg = reader.GetInt32(idxStatus),
+                    Id_groupe_discussion = reader.IsDBNull(idxIdGroupe) ? null : reader.GetInt32(idxIdGroupe),
+                    Contenu = reader.GetString(idxContenu),
+                    Date_envoie = reader.GetDateTime(idxDate),
+                    Id_status_msg = reader.GetInt32(idxStatus),
 
-            Id_piece_jointe = reader.IsDBNull(idxIdPJ) ? null : reader.GetInt32(idxIdPJ),
-            Chemin = reader.IsDBNull(idxChemin) ? null : reader.GetString(idxChemin),
-            Nom_original = reader.IsDBNull(idxNomOriginal) ? null : reader.GetString(idxNomOriginal),
-            Id_espace_travail = reader.IsDBNull(idxEspace) ? null : reader.GetInt32(idxEspace),
+                    Id_piece_jointe = reader.IsDBNull(idxIdPJ) ? null : reader.GetInt32(idxIdPJ),
+                    Chemin = reader.IsDBNull(idxChemin) ? null : reader.GetString(idxChemin),
+                    Nom_original = reader.IsDBNull(idxNomOriginal) ? null : reader.GetString(idxNomOriginal),
+                    Id_espace_travail = reader.IsDBNull(idxEspace) ? null : reader.GetInt32(idxEspace),
 
-            Date_modification = reader.IsDBNull(idxDateModif) ? null : reader.GetDateTime(idxDateModif),
-            Modifiable_jusqua = reader.IsDBNull(idxModifiable) ? null : reader.GetDateTime(idxModifiable),
+                    Date_modification = reader.IsDBNull(idxDateModif) ? null : reader.GetDateTime(idxDateModif),
+                    Modifiable_jusqua = reader.IsDBNull(idxModifiable) ? null : reader.GetDateTime(idxModifiable),
 
-            Est_lu = reader.GetBoolean(idxEstLu)
-        };
+                    Est_lu = reader.GetBoolean(idxEstLu)
+                };
 
-        if (type == "prive")
-        {
-            msg.Matricule_autre = reader.GetString(idxMatAutre);
+                if (type == "prive")
+                {
+                    msg.Matricule_autre = reader.GetString(idxMatAutre);
+                }
+
+                if (type == "groupe")
+                {
+                    msg.Liste_utilisateur_vu = reader.IsDBNull(idxListeVu)
+                        ? new List<string>()
+                        : reader.GetFieldValue<string[]>(idxListeVu).ToList();
+                }
+
+                messages.Add(msg);
+            }
+
+            return messages;
         }
-
-        if (type == "groupe")
-        {
-            msg.Liste_utilisateur_vu = reader.IsDBNull(idxListeVu)
-                ? new List<string>()
-                : reader.GetFieldValue<string[]>(idxListeVu).ToList();
-        }
-
-        messages.Add(msg);
-    }
-
-    return messages;
-}
 
 
 
@@ -282,38 +282,6 @@ namespace MessagerieInterneAPI.Modules.Discussion
 
             return messages;
         }
-
-        /*public async Task<MessageModel> SendMessage(MessageModel message)
-        {
-            const string sql = @"
-                INSERT INTO message (
-                    id_expediteur, id_destinataire, id_groupe_discussion, contenu, date_envoie, id_status_msg, id_espace_travail
-                )
-                VALUES (
-                    @id_expediteur, @id_destinataire, @id_groupe_discussion, @contenu, @date_envoie, @id_status_msg, @id_espace_travail
-                )
-                RETURNING id_message";  // 🔴 Ajout RETURNING
-
-
-            using var liasonBase = new Connexion().ConnectPostgres();
-            liasonBase.Open();
-
-            using var cmd = new NpgsqlCommand(sql, liasonBase);
-            cmd.Parameters.AddWithValue("@id_expediteur", message.Id_expediteur);
-            cmd.Parameters.AddWithValue("@id_destinataire", (object?)message.Id_destinataire ?? DBNull.Value);
-            cmd.Parameters.AddWithValue("@id_groupe_discussion", (object?)message.Id_groupe_discussion ?? DBNull.Value);
-            cmd.Parameters.AddWithValue("@contenu", message.Contenu);
-            cmd.Parameters.AddWithValue("@date_envoie", message.Date_envoie);
-            cmd.Parameters.AddWithValue("@id_status_msg", message.Id_status_msg);
-            cmd.Parameters.AddWithValue("@id_espace_travail", message.Id_espace_travail.HasValue ? (object)message.Id_espace_travail.Value : DBNull.Value);
-
-            // 🔽 Lire l'ID inséré
-            var id = await cmd.ExecuteScalarAsync();
-            message.Id_message = Convert.ToInt32(id); // Assure-toi que le champ existe dans MessageModel
-
-            return message;
-        }*/
-
         public async Task<MessageModel> SendMessage(MessageModel message)
         {
             const string sql = @"
@@ -379,83 +347,6 @@ namespace MessagerieInterneAPI.Modules.Discussion
             return message;
         }
 
-
-
-
-
-
-        /*public async Task SendMessage(MessageModel message)
-        {
-            const string sql = "INSERT INTO message (id_expediteur, id_destinataire, id_groupe_discussion, contenu, date_envoie, id_status_msg) VALUES (@id_expediteur, @id_destinataire, @id_groupe_discussion, @contenu, @date_envoie, @id_status_msg)";
-
-            using var liasonBase = new Connexion().ConnectPostgres();
-            liasonBase.Open();
-
-            using var cmd = new NpgsqlCommand(sql, liasonBase);
-            cmd.Parameters.AddWithValue("@id_expediteur", message.Id_expediteur);
-            cmd.Parameters.AddWithValue("@id_destinataire", (object?)message.Id_destinataire ?? DBNull.Value);
-            cmd.Parameters.AddWithValue("@id_groupe_discussion", (object?)message.Id_groupe_discussion ?? DBNull.Value);
-            cmd.Parameters.AddWithValue("@contenu", message.Contenu);
-            cmd.Parameters.AddWithValue("@date_envoie", message.Date_envoie);
-            cmd.Parameters.AddWithValue("@id_status_msg", message.Id_status_msg);
-
-            await cmd.ExecuteNonQueryAsync();
-        }*/
-
-
-
-        /*public async Task SendMessage(NpgsqlConnection liasonBase, MessageModel message)
-        {
-            Console.WriteLine("ato amin'ny sendMessage");
-
-            Console.WriteLine("==> Début SendMessage");
-
-            // Afficher le contenu de l'objet message
-            Console.WriteLine("Contenu du MessageModel :");
-            Console.WriteLine($"Id_expediteur: {message.Id_expediteur}");
-            Console.WriteLine($"Id_destinataire: {message.Id_destinataire}");
-            Console.WriteLine($"Id_groupe_discussion: {message.Id_groupe_discussion}");
-            Console.WriteLine($"Contenu: {message.Contenu}");
-            Console.WriteLine($"Date_envoie: {message.Date_envoie}");
-            Console.WriteLine($"Id_status_msg: {message.Id_status_msg}");
-            String sql = "INSERT INTO message (id_expediteur, id_destinataire, id_groupe_discussion, contenu, date_envoie, id_status_msg) VALUES (@id_expediteur, @id_destinataire, @id_groupe_discussion, @contenu, @date_envoie, @id_status_msg)";
-
-            if (liasonBase == null || liasonBase.State == ConnectionState.Closed)
-            {
-                Connexion connexion = new Connexion();
-                liasonBase = connexion.ConnectPostgres();
-                liasonBase.Open();
-            }
-
-            try
-            {
-                NpgsqlCommand cmd = new NpgsqlCommand(sql, liasonBase);
-                cmd.Parameters.AddWithValue("@id_expediteur", message.Id_expediteur);
-                cmd.Parameters.AddWithValue("@id_destinataire", (object?)message.Id_destinataire ?? DBNull.Value);
-                cmd.Parameters.AddWithValue("@id_groupe_discussion", (object?)message.Id_groupe_discussion ?? DBNull.Value);
-                cmd.Parameters.AddWithValue("@contenu", message.Contenu);
-                cmd.Parameters.AddWithValue("@date_envoie", message.Date_envoie);
-
-                cmd.Parameters.AddWithValue("@id_status_msg", message.Id_status_msg);
-
-                cmd.ExecuteNonQuery();
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine("❌ Erreur SQL lors de l'insertion du message : " + e.Message);
-                Console.WriteLine(e.StackTrace);
-                throw; // important ! sinon SignalR croit que tout s'est bien passé
-            }
-
-            finally
-            {
-                if (liasonBase != null)
-                {
-                    liasonBase.Close();
-                }
-            }
-
-        }*/
 
         public List<DiscussionModel> GetGrpDiscussionByUser(int userId, int idEspaceTravail, NpgsqlConnection liasonBase)
         {
@@ -588,35 +479,6 @@ ORDER BY id_autre_utilisateur;
 
             return discussions;
         }
-
-
-        /*public async Task<DiscussionModel> VerifOuCreeDiscussionIndividuelle(NpgsqlConnection liasonBase, int idExpediteur, int idDestinataire)
-        {
-            var existe = await _context.Message
-             .AnyAsync(m =>
-                 m.Id_groupe_discussion == null &&
-                 ((m.Id_expediteur == idExpediteur && m.Id_destinataire == idDestinataire) ||
-                 (m.Id_expediteur == idDestinataire && m.Id_destinataire == idExpediteur))
-             );
-
-            if (existe != null)
-            {
-                var discussions = GetDiscussionIndividuelleByUser(idExpediteur, liasonBase);
-                return discussions.FirstOrDefault();
-            }
-            else
-            {
-                var newDiscussion = new DiscussionModel
-                {
-                    Id = m.Id_destinataire,
-                    Nom = "Nouvelle Discussion",
-                    Type = "prive"
-                };
-                return newDiscussion;
-            }
-            
-        }*/
-
         public List<DiscussionModel> searchDiscussion(NpgsqlConnection liasonBase, int idExpediteur, int idDestinataire)
         {
             List<DiscussionModel> discussions = new List<DiscussionModel>();
@@ -699,29 +561,6 @@ ORDER BY id_autre_utilisateur;
 
         public async Task<List<ComptageMsgNonLuDTO>> GetUnreadCounts(int idUser)
         {
-            /*const string sql = @"
-                SELECT 
-                    id_expediteur AS id,
-                    'prive' AS type,
-                    COUNT(*) AS unread_count
-                FROM message
-                WHERE id_destinataire = @idUser
-                AND id_status_msg = 1
-                GROUP BY id_expediteur
-
-                UNION ALL
-
-                SELECT 
-                    m.id_groupe_discussion AS id,
-                    'groupe' AS type,
-                    COUNT(*) AS unread_count
-                FROM message msg
-                JOIN utilisateur_groupe_discussion m ON m.id_groupe_discussion = msg.id_groupe_discussion
-                WHERE m.id_utilisateur = @idUser
-                AND msg.id_status_msg = 1
-                GROUP BY m.id_groupe_discussion;
-            ";*/
-
             const string sql = @"
                 -- Messages privés non lus
                 SELECT 
@@ -777,52 +616,6 @@ ORDER BY id_autre_utilisateur;
             return result;
         }
 
-
-        /*public async Task<Dictionary<int, int>> GetUnreadCounts(int idUser)
-        {
-            const string sql = @"
-                SELECT 
-                    COALESCE(id_groupe_discussion, id_expediteur) AS id_discussion,
-                    COUNT(*) AS unread_count
-                FROM message
-                WHERE id_destinataire = @idUser
-                AND id_status_msg = 1
-                GROUP BY COALESCE(id_groupe_discussion, id_expediteur)";
-
-            const string sql = @"
-                SELECT id_expediteur AS id_discussion, COUNT(*) AS unread_count
-                FROM message
-                WHERE id_destinataire = @idUser
-                AND id_status_msg = 1
-                GROUP BY id_expediteur
-
-                UNION ALL
-
-                SELECT m.id_groupe_discussion AS id_discussion, COUNT(*) AS unread_count
-                FROM message msg
-                JOIN utilisateur_groupe_discussion m ON m.id_groupe_discussion = msg.id_groupe_discussion
-                WHERE m.id_utilisateur = @idUser
-                AND msg.id_status_msg = 1
-                GROUP BY m.id_groupe_discussion;
-            ";
-
-            using var conn = new Connexion().ConnectPostgres();
-            await conn.OpenAsync();
-
-            using var cmd = new NpgsqlCommand(sql, conn);
-            cmd.Parameters.AddWithValue("@idUser", idUser);
-
-            using var reader = await cmd.ExecuteReaderAsync();
-            var result = new Dictionary<int, int>();
-
-            while (await reader.ReadAsync())
-            {
-                result[reader.GetInt32(0)] = reader.GetInt32(1);
-            }
-
-            return result;
-        }*/
-
         public async Task MarkMessagesAsRead(int idUser, int idDiscussion, string type)
         {
             string sql = type == "prive" ? @"
@@ -864,25 +657,6 @@ ORDER BY id_autre_utilisateur;
         }
 
 
-
-        /*public async Task MarkMessagesAsRead(int idUser, int idDiscussion)
-        {
-            const string sql = @"
-                UPDATE message
-                SET id_status_msg = 3
-                WHERE id_destinataire = @idUser
-                AND COALESCE(id_groupe_discussion, id_expediteur) = @idDiscussion
-                AND id_status_msg = 1";
-
-            using var conn = new Connexion().ConnectPostgres();
-            await conn.OpenAsync();
-
-            using var cmd = new NpgsqlCommand(sql, conn);
-            cmd.Parameters.AddWithValue("@idUser", idUser);
-            cmd.Parameters.AddWithValue("@idDiscussion", idDiscussion);
-
-            await cmd.ExecuteNonQueryAsync();
-        }*/
 
         public async Task<string> GetNomExpediteur(NpgsqlConnection liasonBase, int idExpediteur, int idDestinataire)
         {
@@ -934,181 +708,6 @@ ORDER BY id_autre_utilisateur;
 
             return nomExpediteur;
         }
-
-
-        /*public List<DiscussionModel> SearchUtilisateurEtGroupe(NpgsqlConnection liasonBase, int idUtilisateur, string searchTerm)
-        {
-            List<DiscussionModel> results = new List<DiscussionModel>();
-
-            if (liasonBase == null || liasonBase.State == ConnectionState.Closed)
-            {
-                Connexion connexion = new Connexion();
-                liasonBase = connexion.ConnectPostgres();
-                liasonBase.Open();
-            }
-
-            try
-            {
-                // 🔎 Requête utilisateurs
-                string sqlUtilisateurs = @"
-                    SELECT id_utilisateur AS id, CONCAT(prenom, ' ', nom) AS nom, 'utilisateur' AS type
-                    FROM v_info_utilisateur
-                    WHERE 
-                        LOWER(nom) LIKE LOWER(@searchTerm)
-                    OR LOWER(prenom) LIKE LOWER(@searchTerm)
-                    OR LOWER(matricule) LIKE LOWER(@searchTerm)";
-
-                using (var cmd = new NpgsqlCommand(sqlUtilisateurs, liasonBase))
-                {
-                    cmd.Parameters.AddWithValue("@searchTerm", "%" + searchTerm + "%");
-                    using (var reader = cmd.ExecuteReader())
-                    {
-                        while (reader.Read())
-                        {
-                            results.Add(new DiscussionModel
-                            {
-                                Id = reader.GetInt32(0),
-                                Nom = reader.GetString(1),
-                                Type = reader.GetString(2)
-                            });
-                        }
-                    }
-                }
-
-                // 🔎 Requête groupes
-                string sqlGroupes = @"
-                    SELECT g.id_groupe_discussion AS id, g.nom, 'groupe' AS type
-                    FROM groupe_discussion g
-                    JOIN utilisateur_groupe_discussion ug ON ug.id_groupe_discussion = g.id_groupe_discussion
-                    WHERE ug.id_utilisateur = @idUtilisateur
-                    AND LOWER(g.nom) LIKE LOWER(@searchTerm)";
-
-
-                using (var cmd = new NpgsqlCommand(sqlGroupes, liasonBase))
-                {
-                    cmd.Parameters.AddWithValue("@searchTerm", "%" + searchTerm + "%");
-                    cmd.Parameters.AddWithValue("@idUtilisateur", idUtilisateur);
-                    using (var reader = cmd.ExecuteReader())
-                    {
-                        while (reader.Read())
-                        {
-                            results.Add(new DiscussionModel
-                            {
-                                Id = reader.GetInt32(0),
-                                Nom = reader.GetString(1),
-                                Type = reader.GetString(2)
-                            });
-                        }
-                    }
-                }
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine("Erreur recherche : " + e.Message);
-            }
-            finally
-            {
-                if (liasonBase != null)
-                {
-                    liasonBase.Close();
-                }
-            }
-
-            return results;
-        }*/
-
-        // tsy misy recherche ho an'ny admin
-        /*public List<DiscussionModel> SearchUtilisateurEtGroupe(NpgsqlConnection liasonBase, int idUtilisateur, string searchTerm, int idEspaceActif)
-        {
-            List<DiscussionModel> results = new List<DiscussionModel>();
-
-            if (liasonBase == null || liasonBase.State == ConnectionState.Closed)
-            {
-                Connexion connexion = new Connexion();
-                liasonBase = connexion.ConnectPostgres();
-                liasonBase.Open();
-            }
-
-            try
-            {
-                // 🔎 Requête utilisateurs appartenant au même espace
-                string sqlUtilisateurs = @"
-            SELECT DISTINCT u.id_utilisateur AS id, CONCAT(u.prenom, ' ', u.nom) AS nom, 'utilisateur' AS type
-            FROM utilisateur u
-            JOIN utilisateur_espace_travail uet ON u.id_utilisateur = uet.id_utilisateur
-            WHERE uet.id_espace_travail = @idEspaceActif
-              AND (LOWER(u.nom) LIKE LOWER(@searchTerm)
-                   OR LOWER(u.prenom) LIKE LOWER(@searchTerm)
-                   OR LOWER(u.matricule) LIKE LOWER(@searchTerm))
-              AND u.id_utilisateur <> @idUtilisateur
-            ORDER BY nom ASC";
-
-                using (var cmd = new NpgsqlCommand(sqlUtilisateurs, liasonBase))
-                {
-                    cmd.Parameters.AddWithValue("@searchTerm", "%" + searchTerm + "%");
-                    cmd.Parameters.AddWithValue("@idEspaceActif", idEspaceActif);
-                    cmd.Parameters.AddWithValue("@idUtilisateur", idUtilisateur);
-
-                    using (var reader = cmd.ExecuteReader())
-                    {
-                        while (reader.Read())
-                        {
-                            results.Add(new DiscussionModel
-                            {
-                                Id = reader.GetInt32(0),
-                                Nom = reader.GetString(1),
-                                Type = reader.GetString(2)
-                            });
-                        }
-                    }
-                }
-
-                // 🔎 Requête groupes appartenant au même espace
-                string sqlGroupes = @"
-            SELECT g.id_groupe_discussion AS id, g.nom, 'groupe' AS type
-            FROM groupe_discussion g
-            JOIN utilisateur_groupe_discussion ug ON ug.id_groupe_discussion = g.id_groupe_discussion
-            WHERE g.id_espace_travail = @idEspaceActif
-              AND ug.id_utilisateur = @idUtilisateur
-              AND LOWER(g.nom) LIKE LOWER(@searchTerm)
-            ORDER BY g.nom ASC";
-
-                using (var cmd = new NpgsqlCommand(sqlGroupes, liasonBase))
-                {
-                    cmd.Parameters.AddWithValue("@searchTerm", "%" + searchTerm + "%");
-                    cmd.Parameters.AddWithValue("@idUtilisateur", idUtilisateur);
-                    cmd.Parameters.AddWithValue("@idEspaceActif", idEspaceActif);
-
-                    using (var reader = cmd.ExecuteReader())
-                    {
-                        while (reader.Read())
-                        {
-                            results.Add(new DiscussionModel
-                            {
-                                Id = reader.GetInt32(0),
-                                Nom = reader.GetString(1),
-                                Type = reader.GetString(2)
-                            });
-                        }
-                    }
-                }
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine("Erreur recherche : " + e.Message);
-            }
-            finally
-            {
-                if (liasonBase != null)
-                {
-                    liasonBase.Close();
-                }
-            }
-
-            return results;
-        }*/
-
-        // misy recherche ho an'ny admin sy utilisateur normal
         public List<DiscussionModel> SearchUtilisateurEtGroupe(
             NpgsqlConnection liasonBase,
             int idUtilisateur,
@@ -1139,7 +738,7 @@ ORDER BY id_autre_utilisateur;
                     sqlUtilisateurs = @"
                 SELECT DISTINCT u.id_utilisateur AS id, 
                        CONCAT(u.prenom, ' ', u.nom) AS nom, 
-                       'utilisateur' AS type
+                       'utilisateur' AS type, u.matricule
                 FROM utilisateur u
                 WHERE (LOWER(u.nom) LIKE LOWER(@searchTerm)
                     OR LOWER(u.prenom) LIKE LOWER(@searchTerm)
@@ -1153,7 +752,7 @@ ORDER BY id_autre_utilisateur;
                     sqlUtilisateurs = @"
                 SELECT DISTINCT u.id_utilisateur AS id, 
                        CONCAT(u.prenom, ' ', u.nom) AS nom, 
-                       'utilisateur' AS type
+                       'utilisateur' AS type, u.matricule
                 FROM utilisateur u
                 JOIN utilisateur_espace_travail uet ON u.id_utilisateur = uet.id_utilisateur
                 WHERE uet.id_espace_travail = @idEspaceActif
@@ -1180,7 +779,8 @@ ORDER BY id_autre_utilisateur;
                             {
                                 Id = reader.GetInt32(0),
                                 Nom = reader.GetString(1),
-                                Type = reader.GetString(2)
+                                Type = reader.GetString(2),
+                                Matricule = reader.IsDBNull(3) ? null : reader.GetString(3)
                             });
                         }
                     }
@@ -1338,12 +938,12 @@ ORDER BY id_autre_utilisateur;
     string type,
     string search
 )
-{
-    string sql;
+        {
+            string sql;
 
-    if (type == "groupe")
-    {
-        sql = @"
+            if (type == "groupe")
+            {
+                sql = @"
         SELECT
             v.id_message,
             v.id_expediteur,
@@ -1385,10 +985,10 @@ ORDER BY id_autre_utilisateur;
              OR COALESCE(v.nom_original, '') ILIKE @search
           )
         ORDER BY v.id_message ASC;";
-    }
-    else if (type == "prive")
-    {
-        sql = @"
+            }
+            else if (type == "prive")
+            {
+                sql = @"
         SELECT
             v.id_message,
             v.id_expediteur,
@@ -1425,106 +1025,106 @@ ORDER BY id_autre_utilisateur;
              OR COALESCE(v.nom_original, '') ILIKE @search
           )
         ORDER BY v.id_message ASC;";
-    }
-    else
-    {
-        throw new ArgumentException("Type de discussion inconnu");
-    }
+            }
+            else
+            {
+                throw new ArgumentException("Type de discussion inconnu");
+            }
 
-    using var conn = new Connexion().ConnectPostgres();
-    await conn.OpenAsync();
+            using var conn = new Connexion().ConnectPostgres();
+            await conn.OpenAsync();
 
-    using var cmd = new NpgsqlCommand(sql, conn);
-    cmd.Parameters.AddWithValue("@id", dest);
-    cmd.Parameters.AddWithValue("@userId", exp);
-    cmd.Parameters.AddWithValue("@search", $"%{search}%");
+            using var cmd = new NpgsqlCommand(sql, conn);
+            cmd.Parameters.AddWithValue("@id", dest);
+            cmd.Parameters.AddWithValue("@userId", exp);
+            cmd.Parameters.AddWithValue("@search", $"%{search}%");
 
-    if (type == "prive")
-        cmd.Parameters.AddWithValue("@dest", dest);
+            if (type == "prive")
+                cmd.Parameters.AddWithValue("@dest", dest);
 
-    var messages = new List<MessageModel>();
+            var messages = new List<MessageModel>();
 
-    using var reader = await cmd.ExecuteReaderAsync();
-    while (await reader.ReadAsync())
-    {
-        var msg = new MessageModel
-        {
-            Id_message = reader.GetInt32(reader.GetOrdinal("id_message")),
-            Id_expediteur = reader.GetInt32(reader.GetOrdinal("id_expediteur")),
+            using var reader = await cmd.ExecuteReaderAsync();
+            while (await reader.ReadAsync())
+            {
+                var msg = new MessageModel
+                {
+                    Id_message = reader.GetInt32(reader.GetOrdinal("id_message")),
+                    Id_expediteur = reader.GetInt32(reader.GetOrdinal("id_expediteur")),
 
-            Nom_expediteur = reader.IsDBNull(reader.GetOrdinal("nom_expediteur"))
-                ? null
-                : reader.GetString(reader.GetOrdinal("nom_expediteur")),
+                    Nom_expediteur = reader.IsDBNull(reader.GetOrdinal("nom_expediteur"))
+                        ? null
+                        : reader.GetString(reader.GetOrdinal("nom_expediteur")),
 
-            Matricule_expediteur = reader.IsDBNull(reader.GetOrdinal("matricule_expediteur"))
-                ? null
-                : reader.GetString(reader.GetOrdinal("matricule_expediteur")),
+                    Matricule_expediteur = reader.IsDBNull(reader.GetOrdinal("matricule_expediteur"))
+                        ? null
+                        : reader.GetString(reader.GetOrdinal("matricule_expediteur")),
 
-            Id_destinataire = reader.IsDBNull(reader.GetOrdinal("id_destinataire"))
-                ? null
-                : reader.GetInt32(reader.GetOrdinal("id_destinataire")),
+                    Id_destinataire = reader.IsDBNull(reader.GetOrdinal("id_destinataire"))
+                        ? null
+                        : reader.GetInt32(reader.GetOrdinal("id_destinataire")),
 
-            Nom_destinataire = reader.IsDBNull(reader.GetOrdinal("nom_destinataire"))
-                ? null
-                : reader.GetString(reader.GetOrdinal("nom_destinataire")),
+                    Nom_destinataire = reader.IsDBNull(reader.GetOrdinal("nom_destinataire"))
+                        ? null
+                        : reader.GetString(reader.GetOrdinal("nom_destinataire")),
 
-            Matricule_destinataire = reader.IsDBNull(reader.GetOrdinal("matricule_destinataire"))
-                ? null
-                : reader.GetString(reader.GetOrdinal("matricule_destinataire")),
+                    Matricule_destinataire = reader.IsDBNull(reader.GetOrdinal("matricule_destinataire"))
+                        ? null
+                        : reader.GetString(reader.GetOrdinal("matricule_destinataire")),
 
-            Id_groupe_discussion = reader.IsDBNull(reader.GetOrdinal("id_groupe_discussion"))
-                ? null
-                : reader.GetInt32(reader.GetOrdinal("id_groupe_discussion")),
+                    Id_groupe_discussion = reader.IsDBNull(reader.GetOrdinal("id_groupe_discussion"))
+                        ? null
+                        : reader.GetInt32(reader.GetOrdinal("id_groupe_discussion")),
 
-            Contenu = reader.IsDBNull(reader.GetOrdinal("contenu"))
-                ? null
-                : reader.GetString(reader.GetOrdinal("contenu")),
+                    Contenu = reader.IsDBNull(reader.GetOrdinal("contenu"))
+                        ? null
+                        : reader.GetString(reader.GetOrdinal("contenu")),
 
-            Date_envoie = reader.GetDateTime(reader.GetOrdinal("date_envoie")),
-            Id_status_msg = reader.GetInt32(reader.GetOrdinal("id_status_msg")),
+                    Date_envoie = reader.GetDateTime(reader.GetOrdinal("date_envoie")),
+                    Id_status_msg = reader.GetInt32(reader.GetOrdinal("id_status_msg")),
 
-            Id_piece_jointe = reader.IsDBNull(reader.GetOrdinal("id_piece_joint"))
-                ? null
-                : reader.GetInt32(reader.GetOrdinal("id_piece_joint")),
+                    Id_piece_jointe = reader.IsDBNull(reader.GetOrdinal("id_piece_joint"))
+                        ? null
+                        : reader.GetInt32(reader.GetOrdinal("id_piece_joint")),
 
-            Chemin = reader.IsDBNull(reader.GetOrdinal("chemin"))
-                ? null
-                : reader.GetString(reader.GetOrdinal("chemin")),
+                    Chemin = reader.IsDBNull(reader.GetOrdinal("chemin"))
+                        ? null
+                        : reader.GetString(reader.GetOrdinal("chemin")),
 
-            Nom_original = reader.IsDBNull(reader.GetOrdinal("nom_original"))
-                ? null
-                : reader.GetString(reader.GetOrdinal("nom_original")),
+                    Nom_original = reader.IsDBNull(reader.GetOrdinal("nom_original"))
+                        ? null
+                        : reader.GetString(reader.GetOrdinal("nom_original")),
 
-            Id_espace_travail = reader.IsDBNull(reader.GetOrdinal("id_espace_travail"))
-                ? null
-                : reader.GetInt32(reader.GetOrdinal("id_espace_travail")),
+                    Id_espace_travail = reader.IsDBNull(reader.GetOrdinal("id_espace_travail"))
+                        ? null
+                        : reader.GetInt32(reader.GetOrdinal("id_espace_travail")),
 
-            Date_modification = reader.IsDBNull(reader.GetOrdinal("date_modification"))
-                ? null
-                : reader.GetDateTime(reader.GetOrdinal("date_modification")),
+                    Date_modification = reader.IsDBNull(reader.GetOrdinal("date_modification"))
+                        ? null
+                        : reader.GetDateTime(reader.GetOrdinal("date_modification")),
 
-            Modifiable_jusqua = reader.IsDBNull(reader.GetOrdinal("modifiable_jusqua"))
-                ? null
-                : reader.GetDateTime(reader.GetOrdinal("modifiable_jusqua")),
+                    Modifiable_jusqua = reader.IsDBNull(reader.GetOrdinal("modifiable_jusqua"))
+                        ? null
+                        : reader.GetDateTime(reader.GetOrdinal("modifiable_jusqua")),
 
-            Est_lu = reader.GetBoolean(reader.GetOrdinal("est_lu"))
-        };
+                    Est_lu = reader.GetBoolean(reader.GetOrdinal("est_lu"))
+                };
 
-        if (type == "groupe")
-        {
-            msg.Liste_utilisateur_vu =
-                reader.IsDBNull(reader.GetOrdinal("liste_utilisateur_vu"))
-                ? new List<string>()
-                : reader.GetFieldValue<string[]>(
-                    reader.GetOrdinal("liste_utilisateur_vu")
-                  ).ToList();
+                if (type == "groupe")
+                {
+                    msg.Liste_utilisateur_vu =
+                        reader.IsDBNull(reader.GetOrdinal("liste_utilisateur_vu"))
+                        ? new List<string>()
+                        : reader.GetFieldValue<string[]>(
+                            reader.GetOrdinal("liste_utilisateur_vu")
+                          ).ToList();
+                }
+
+                messages.Add(msg);
+            }
+
+            return messages;
         }
-
-        messages.Add(msg);
-    }
-
-    return messages;
-}
 
 
 

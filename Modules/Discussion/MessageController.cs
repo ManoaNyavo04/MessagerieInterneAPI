@@ -86,9 +86,6 @@ namespace MessagerieInterneAPI.Modules.Discussion
 
             var messages = await _service.GetMessages(idUtilisateur, targetId, type);
 
-            /*List<MessageModel> messages = type == "groupe"
-                ? _service.GetMessagesByGroupId(connexion.ConnectPostgres(), targetId)
-                : _service.GetIndividualMessage(connexion.ConnectPostgres(), idUtilisateur, targetId);*/
             Console.WriteLine("tafiditra??");
 
             return Ok(messages);
@@ -108,9 +105,6 @@ namespace MessagerieInterneAPI.Modules.Discussion
 
             var messages = await _service.SearchMessages(idUtilisateur, targetId, type, content);
 
-            /*List<MessageModel> messages = type == "groupe"
-                ? _service.GetMessagesByGroupId(connexion.ConnectPostgres(), targetId)
-                : _service.GetIndividualMessage(connexion.ConnectPostgres(), idUtilisateur, targetId);*/
             Console.WriteLine("tafiditra??");
 
             return Ok(messages);

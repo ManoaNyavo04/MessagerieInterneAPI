@@ -29,20 +29,6 @@ namespace MessagerieInterneAPI
             _httpClient = new HttpClient(handler);
         }
 
-        /*public async Task<UtilisateurModel?> VerifUtilisateur(string matricule, string motDePasse)
-        {
-            var user = await _context.Utilisateur
-                .FirstOrDefaultAsync(u => u.Matricule == matricule);
-            if (user == null) return null;
-
-            var isValid = await _context
-                .Utilisateur
-                .FromSqlRaw("SELECT * FROM utilisateur WHERE matricule = {0} AND mdp = crypt({1}, mdp)", matricule, motDePasse)
-                .AnyAsync();
-
-            return isValid ? user : null;
-        }*/
-
         public async Task<UtilisateurModel?> VerifUtilisateur(string matricule, string motDePasse)
         {
             var user = await _context.Utilisateur.FirstOrDefaultAsync(u => u.Matricule == matricule);

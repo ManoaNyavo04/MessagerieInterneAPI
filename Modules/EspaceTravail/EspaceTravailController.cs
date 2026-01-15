@@ -35,10 +35,6 @@ namespace MessagerieInterneAPI
             int idUtilisateur = int.Parse(idUtilisateurClaim.Value);
             Console.WriteLine("id ve hitany (message zone): " + idUtilisateur);
 
-            /*var espaceActifClaim = User.Claims.FirstOrDefault(c => c.Type == "EspaceActif");
-            if (espaceActifClaim == null) return BadRequest("Espace actif non défini");
-            int espaceActif = int.Parse(espaceActifClaim.Value);*/
-
 
             var espaces = await _service.GetEspacesByUtilisateurIdAsync(idUtilisateur);
             return Ok(espaces);

@@ -157,35 +157,6 @@ app.MapControllers();
 app.MapHub<ChatHub>("/chathub");
 app.UseStaticFiles(); // pour wwwroot par défaut
 
-// si tu stockes les fichiers ailleurs, par ex. "Uploads"
-/*var uploadsPath = Path.Combine(AppContext.BaseDirectory, "..", "Uploads");
-
-// Normalise le chemin absolu (résout les "..")
-uploadsPath = Path.GetFullPath(uploadsPath);
-
-if (!Directory.Exists(uploadsPath))
-    Directory.CreateDirectory(uploadsPath);
-
-app.UseStaticFiles(new StaticFileOptions
-{
-    FileProvider = new PhysicalFileProvider(uploadsPath),
-    RequestPath = "/Uploads"
-});*/
-
-// version dev
-/*var uploadsPath = Path.Combine(Directory.GetCurrentDirectory(), "Uploads");
-
-if (!Directory.Exists(uploadsPath))
-    Directory.CreateDirectory(uploadsPath);
-
-app.UseStaticFiles(new StaticFileOptions
-{
-    FileProvider = new PhysicalFileProvider(uploadsPath),
-    RequestPath = "/Uploads"
-});*/
-
-// Version dev + prod 
-// var uploadsPath = Path.Combine(app.Environment.WebRootPath, "Uploads");
 var uploadsPath = Path.Combine(Directory.GetCurrentDirectory(),"wwwroot", "Uploads");
 
 if (!Directory.Exists(uploadsPath))

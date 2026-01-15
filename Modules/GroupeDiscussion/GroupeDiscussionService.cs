@@ -237,7 +237,8 @@ namespace MessagerieInterneAPI
                 {
                     string sqlMembre = @"
                         INSERT INTO utilisateur_groupe_discussion 
-                        (id_groupe_discussion, id_utilisateur, est_admin)
+                        (id_groupe_discussion, id_uti
+                        lisateur, est_admin)
                         VALUES (@id_groupe_discussion, @id_utilisateur, @est_admin)";
                     using var cmd = new NpgsqlCommand(sqlMembre, liaisonbase);
                     cmd.Parameters.AddWithValue("@id_groupe_discussion", idGroupe);

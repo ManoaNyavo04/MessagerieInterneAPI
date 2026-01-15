@@ -34,24 +34,7 @@ namespace MessagerieInterneAPI.Modules.Utilisateur
             return Ok("ieeeee : " + connex);
         }
 
-        /*[HttpPost("login")]
-        public async Task<IActionResult> Login([FromBody] LoginRequest model)
-        {
-            var siUtilisateur = await _service.VerifUtilisateur(model.Matricule, model.Mdp);
-            if (siUtilisateur == null)
-            {
-                return Unauthorized("Matricule ou mot de passe invalide eeeeeeeeee.");
-            }
-
-            var token = login.GenererToken(siUtilisateur, _config);
-            var profilUtilisateur = _service.GetProfilUtilisateur(siUtilisateur);
-            return Ok(new
-            {
-                token,
-                profilUtilisateur
-            });
-
-        }*/
+        
 
         [HttpPost("login")]
         public async Task<IActionResult> Login([FromBody] LoginRequest model)
@@ -76,17 +59,10 @@ namespace MessagerieInterneAPI.Modules.Utilisateur
             {
                 token,
                 profilUtilisateur,
-                // espaceActif = new
-                // {
-                //     idEspaceTravail = idPremierEspace,
-                //     nomEspaceTravail = nomPremierEspace
-                // },
-                // espacesDisponibles = espaces
 
             });
         }
 
-        // [Authorize(Roles = "1")]
         [Authorize(Roles = "m_1")]
         [HttpGet("allUsers")]
         public async Task<IActionResult> GetAllUtilisateurs()
