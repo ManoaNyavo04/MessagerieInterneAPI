@@ -12,6 +12,7 @@ CREATE OR REPLACE VIEW v_info_utilisateur AS (
     join role r on r.id_role = u.id_role order by u.id_utilisateur
 );
 
+
 CREATE OR REPLACE VIEW v_utilisateur_groupe_discussion AS (
     select 
         gd.id_groupe_discussion,
