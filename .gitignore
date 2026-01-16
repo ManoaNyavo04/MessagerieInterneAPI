@@ -2,6 +2,7 @@
 bin/
 obj/
 publish/
+wwwroot/
 *.dll
 *.exe
 *.pdb
@@ -14,6 +15,7 @@ publish/
 
 # Visual Studio Code
 .vscode/
+
 
 # Logs
 *.log
